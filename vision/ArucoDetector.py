@@ -63,21 +63,16 @@ class ArucoDetector:
                 corners, self.marker_size, camera_matrix, camera_distortion)
 
             image_copy = image.copy()
-            
             cv2.aruco.drawDetectedMarkers(
                 image_copy, corners, ids, borderColor=(0, 0, 255))
-
-            for i in range(0, len(r_vecs)):
-                cv2.drawFrameAxes(image_copy, camera_matrix,
-                               camera_distortion, r_vecs[i], t_vecs[i], self.marker_size/2.0, 3)
-
             cv2.imshow("Frame", image_copy)
-            cv2.waitKey(100)
+            cv2.waitKey(5)
 
             for i in range(0, len(r_vecs)):
-                id = ids[i][0]
+                id = ids[i]
                 r_vec = r_vecs[i]
                 t_vec = t_vecs[i]
                 marker_poses[id] = self.get_pose(t_vec, r_vec)
 
         return marker_poses
+

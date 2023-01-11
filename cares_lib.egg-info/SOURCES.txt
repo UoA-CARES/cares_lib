@@ -1,0 +1,10 @@
+README.md
+setup.py
+cares_lib/__init__.py
+cares_lib.egg-info/PKG-INFO
+cares_lib.egg-info/SOURCES.txt
+cares_lib.egg-info/dependency_links.txt
+cares_lib.egg-info/top_level.txt
+cares_lib/utils/__init__.py
+cares_lib/vision/ArucoDetector.py
+cares_lib/vision/__init__.py
