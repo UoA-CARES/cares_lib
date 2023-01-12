@@ -74,5 +74,5 @@ class ArucoDetector:
                 t_vec = t_vecs[i]
                 marker_poses[id] = self.get_pose(t_vec, r_vec)
 
-        return marker_poses
+        return marker_poses, id 
 
