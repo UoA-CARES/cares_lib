@@ -55,12 +55,8 @@ class ArucoDetector:
     def get_marker_poses(self, image, camera_matrix, camera_distortion):
         marker_poses = {}
 
-        detect_attempt = 0
-        while len(corners) == 0 and detect_attempt < 4:
-            print("detecting.....")
-            (corners, ids, rejected_points) = cv2.aruco.detectMarkers(
-                image, self.dictionary, parameters=self.aruco_params)
-            detect_attempt += 1
+        (corners, ids, rejected_points) = cv2.aruco.detectMarkers(
+            image, self.dictionary, parameters=self.aruco_params)
 
         if len(corners) > 0:
             r_vecs, t_vecs, _ = cv2.aruco.estimatePoseSingleMarkers(
