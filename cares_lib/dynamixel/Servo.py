@@ -1,5 +1,6 @@
 import logging
-import dynamixel_sdk as dxl         # Uses Dynamixel SDK library
+import time
+import dynamixel_sdk as dxl
 
 """
 The servo class contains methods used to change attributes of the servo motors
@@ -8,16 +9,6 @@ Beth Cutler
 """
 
 DXL_MOVING_STATUS_THRESHOLD = 10
-
-# ERRNUM_RESULT_FAIL = 1  # Failed to process the instruction packet.
-# ERRNUM_INSTRUCTION = 2  # Instruction error
-# ERRNUM_CRC = 3  # CRC check error
-# ERRNUM_DATA_RANGE = 4  # Data range error
-# ERRNUM_DATA_LENGTH = 5  # Data length error
-# ERRNUM_DATA_LIMIT = 6  # Data limit error
-# ERRNUM_ACCESS = 7  # Access error
-
-# ERRBIT_ALERT = 128  # When the device has a problem, this bit is set to 1. Check "Device Status Check" value.
 
 class DynamixelServoError(IOError):
     pass
@@ -51,7 +42,7 @@ class Servo(object):
 
         self.target_position = self.current_position()
 
-    def move(self, target_position, wait=True):
+    def move(self, target_position, wait=True, timeout=5):
         if not self.verify_step(target_position):
             error_message = f"Dynamixel#{self.motor_id}: Target position {target_position} is out of bounds of min {self.min} max {self.max}"
             logging.error(error_message)
@@ -62,14 +53,10 @@ class Servo(object):
 
             dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["goal_position"], self.target_position)
             self.process_result(dxl_comm_result, dxl_error, message=f"successfully told to move to {self.target_position}")
-            if dxl_comm_result != dxl.COMM_SUCCESS:
-                position = self.current_position()
-                return position
 
-            while wait:
-                moving = self.is_moving()
-                if not moving:
-                    break
+            start_time = time.perf_counter()
+            while wait and self.is_moving() and time.perf_time() < start_time + timeout:
+                pass
 
             return self.current_position()
         except DynamixelServoError as error:
@@ -171,7 +158,7 @@ class Servo(object):
             logging.error(error_message)
             raise DynamixelServoError(error_message)
 
-        logging.debug(f"Dynamixel#{self.motor_id} {message}")
+        logging.debug(f"Dynamixel#{self.motor_id}: {message}")
         
     @staticmethod
     def step_to_angle(step):
@@ -182,3 +169,12 @@ class Servo(object):
     def angle_to_step(angle):
         #  -150 to 150 degrees to 0 to 1023 steps
         return (3.41 * angle) + 511.5
+
+# TODO expand the error code returns to fit the actual servo error messages
+# ERRNUM_RESULT_FAIL = 1  # Failed to process the instruction packet.
+# ERRNUM_INSTRUCTION = 2  # Instruction error
+# ERRNUM_CRC = 3  # CRC check error
+# ERRNUM_DATA_RANGE = 4  # Data range error
+# ERRNUM_DATA_LENGTH = 5  # Data length error
+# ERRNUM_DATA_LIMIT = 6  # Data limit error
+# ERRNUM_ACCESS = 7  # Access error
