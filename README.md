@@ -9,15 +9,15 @@ These instructions will get you a copy of the project up and running on your loc
 What things you need to install the software and how to install them
 
 ```
-cd PATH_TO_CARES_LIB_FOLDER/cares_lib
-pip install .
+pip3 install -r requirements.txt
 ```
 
 ### Installing
 Run the following command to install the library onto the local computer. 
 
 ```
-python3 setup.py install --user 
+cd PATH_TO_CARES_LIB_FOLDER/cares_lib
+pip install .
 ```
 
 # Contributing
