@@ -1,38 +1,17 @@
 import cv2
 import math
 import numpy as np
-
+import cares_lib.utils as utils
 
 class ArucoDetector:
-    def __init__(self, marker_size, dictionary_id=cv2.aruco.DICT_4X4_50) -> None:
-        self.dictionary = cv2.aruco.Dictionary_get(
-            dictionary_id)  # aruco dictionary
+    def __init__(self, marker_size, dictionary_id=cv2.aruco.DICT_4X4_50):
+        self.dictionary = cv2.aruco.Dictionary_get(dictionary_id)
         self.aruco_params = cv2.aruco.DetectorParameters_create()
-        self.marker_size = marker_size  # mm
-
-    def is_close(self, x, y, rtol=1.e-5, atol=1.e-8):
-        # this is a tolerance thingy i think
-        return abs(x - y) <= atol + rtol * abs(y)
-
-    def calculate_euler_angles(self, R):
-        phi = 0.0
-        if self.is_close(R[2, 0], -1.0):
-            theta = math.pi / 2.0
-            psi = math.atan2(R[0, 1], R[0, 2])
-        elif self.is_close(R[2, 0], 1.0):
-            theta = -math.pi / 2.0
-            psi = math.atan2(-R[0, 1], -R[0, 2])
-        else:
-            theta = -math.asin(R[2, 0])
-            cos_theta = math.cos(theta)
-            psi = math.atan2(R[2, 1] / cos_theta, R[2, 2] / cos_theta)
-            phi = math.atan2(R[1, 0] / cos_theta, R[0, 0] / cos_theta)
-        return psi, theta, phi
+        self.marker_size = marker_size
 
     def get_orientation(self, r_vec):
         r_matrix, _ = cv2.Rodrigues(r_vec)
-        psi, theta, phi = self.calculate_euler_angles(
-            r_matrix)  # roll, pitch, yaw
+        roll, pitch, yaw = utils.rotation_to_euler(r_matrix)
 
         def validate_angle(degrees):
             if degrees < 0:
@@ -41,11 +20,11 @@ class ArucoDetector:
                 degrees -= 360
             return degrees
 
-        psi = validate_angle(math.degrees(psi))
-        theta = validate_angle(math.degrees(theta))
-        phi = validate_angle(math.degrees(phi))
+        roll  = validate_angle(math.degrees(roll))
+        pitch = validate_angle(math.degrees(pitch))
+        yaw   = validate_angle(math.degrees(yaw))
 
-        return psi, theta, phi
+        return roll, pitch, yaw
 
     def get_pose(self, t_vec, r_vec):
         pose = t_vec
@@ -78,7 +57,7 @@ class ArucoDetector:
                 id = ids[i][0]
                 r_vec = r_vecs[i]
                 t_vec = t_vecs[i]
-          	#TODO: change this to output something less bulky than two arrays 
+          	    #TODO: change this to output something less bulky than two arrays 
                 marker_poses[id] = self.get_pose(t_vec, r_vec)
 
         return marker_poses
