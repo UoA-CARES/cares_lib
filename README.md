@@ -18,7 +18,7 @@ Run the following command to install the library onto the local computer.
 
 ```
 cd PATH_TO_CARES_LIB_FOLDER/cares_lib
-pip install .
+pip3 install .
 ```
 
 # Contributing
