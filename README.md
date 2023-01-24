@@ -9,7 +9,8 @@ These instructions will get you a copy of the project up and running on your loc
 What things you need to install the software and how to install them
 
 ```
-pip3 install -r requirements.txt
+cd PATH_TO_CARES_LIB_FOLDER/cares_lib
+pip install .
 ```
 
 ### Installing
