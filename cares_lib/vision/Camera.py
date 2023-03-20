@@ -1,3 +1,4 @@
+import logging
 import cv2
 import numpy as np
 
@@ -5,32 +6,25 @@ from pathlib import Path
 file_path = Path(__file__).parent.resolve()
 
 class Camera(object):
-    def __init__(self, camera_id=0, robot_id='RR'):
+    def __init__(self, camera_id, camera_matrix_path, camera_distortion_path):
 
         self.camera = cv2.VideoCapture(camera_id)
         if not self.camera.isOpened():
-            raise Exception("Could not open video device")
+            raise IOError("Could not open video device")
 
-        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)  # aruco dictionary
-        self.aruco_params = cv2.aruco.DetectorParameters_create()
-        self.marker_size = 18  # mm
+        self.camera_matrix     = np.loadtxt(camera_matrix_path)
+        self.camera_distortion = np.loadtxt(camera_distortion_path)
 
-        if robot_id == 'RR':
-            self.camera_matrix     = np.loadtxt(f"{file_path}/config/camera_matrix_RR.txt")
-            self.camera_distortion = np.loadtxt(f"{file_path}/config/camera_distortion_RR.txt")
-        else:
-            self.camera_matrix     = np.loadtxt(f"{file_path}/config/camera_matrix_RR.txt")
-            self.camera_distortion = np.loadtxt(f"{file_path}/config/camera_distortion_RR.txt")
+    def get_frame(self, delay_frame=5):
+        returned = False
+        frame = None
 
-    def get_frame(self):
-        # read 5 times needed because frame delay. MUST BE INCLUDED
-        returned, frame = self.camera.read()
-        returned, frame = self.camera.read()
-        returned, frame = self.camera.read()
-        returned, frame = self.camera.read()
-        returned, frame = self.camera.read()
+        # read delay_frame times needed because frame delay. MUST BE INCLUDED
+        for _ in range(0, delay_frame):
+            returned, frame = self.camera.read()
 
         if returned:
             return frame
-        print("Error: No frame returned")
+
+        logging.error("Error: No frame returned")
         return None
