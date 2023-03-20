@@ -42,6 +42,23 @@ class Servo(object):
 
         self.target_position = self.current_position()
 
+    def ping(self):
+        try:
+            dxl_comm_result, dxl_error = self.packet_handler.ping(self.port_handler, self.motor_id)
+            self.process_result(dxl_comm_result, dxl_error, message=f"successfully pinged Dynamixel#{self.motor_id}")
+        except DynamixelServoError as error:
+            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to ping") from error
+
+    def enable(self):
+        try:
+            self.disable_torque()
+            self.limit_torque()
+            self.limit_speed()
+            self.enable_torque()
+            self.turn_on_LED()
+        except DynamixelServoError as error:
+            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to enable") from error
+
     def move(self, target_position, wait=True, timeout=5):
         if not self.verify_step(target_position):
             error_message = f"Dynamixel#{self.motor_id}: Target position {target_position} is out of bounds of min {self.min} max {self.max}"
