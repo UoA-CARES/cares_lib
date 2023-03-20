@@ -44,8 +44,8 @@ class Servo(object):
 
     def ping(self):
         try:
-            dxl_comm_result, dxl_error = self.packet_handler.ping(self.port_handler, self.motor_id)
-            self.process_result(dxl_comm_result, dxl_error, message=f"successfully pinged Dynamixel#{self.motor_id}")
+            model_number, dxl_comm_result, dxl_error = self.packet_handler.ping(self.port_handler, self.motor_id)
+            self.process_result(dxl_comm_result, dxl_error, message=f"successfully pinged Dynamixel#{self.motor_id} as model {model_number}")
         except DynamixelServoError as error:
             raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to ping") from error
 
