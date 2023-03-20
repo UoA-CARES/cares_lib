@@ -2,9 +2,6 @@ import logging
 import cv2
 import numpy as np
 
-from pathlib import Path
-file_path = Path(__file__).parent.resolve()
-
 class Camera(object):
     def __init__(self, camera_id, camera_matrix_path, camera_distortion_path):
 
@@ -23,8 +20,7 @@ class Camera(object):
         for _ in range(0, delay_frame):
             returned, frame = self.camera.read()
 
-        if returned:
-            return frame
+        if not returned or frame is None:
+            raise IOError("Camera did not return a frame")    
 
-        logging.error("Error: No frame returned")
-        return None
+        return frame
