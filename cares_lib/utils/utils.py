@@ -1,9 +1,9 @@
 # General purpose useful functions
 import math
 
-def rotation_to_euler(self, rotation_matrix):
+def rotation_to_euler(rotation_matrix):
   # math is based on http://eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
-    def is_close(self, x, y, rtol=1.e-5, atol=1.e-8):
+    def is_close(x, y, rtol=1.e-5, atol=1.e-8):
       return abs(x - y) <= atol + rtol * abs(y)
 
     yaw = 0.0

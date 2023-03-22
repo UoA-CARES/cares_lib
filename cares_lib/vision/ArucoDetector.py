@@ -1,7 +1,6 @@
 import cv2
 import math
-import numpy as np
-import cares_lib.utils as utils
+import cares_lib.utils.utils as utils
 
 class ArucoDetector:
     def __init__(self, marker_size, dictionary_id=cv2.aruco.DICT_4X4_50):
