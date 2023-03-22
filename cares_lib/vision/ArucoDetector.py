@@ -27,10 +27,11 @@ class ArucoDetector:
         return roll, pitch, yaw
 
     def get_pose(self, t_vec, r_vec):
-        pose = t_vec
-        orientation = self.get_orientation(r_vec)
-        return pose, orientation
-
+        pose = {}
+        pose["position"] = t_vec
+        pose["orientation"] = self.get_orientation(r_vec)
+        return pose
+        
     def get_marker_poses(self, image, camera_matrix, camera_distortion):
         marker_poses = {}
 
