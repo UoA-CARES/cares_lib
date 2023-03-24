@@ -27,12 +27,13 @@ class Servo(object):
         "moving": 49
     }
 
-    def __init__(self, port_handler, packet_handler, LED_colour, motor_id, torque_limit, speed_limit, max, min):
+    def __init__(self, port_handler, packet_handler, motor_id, LED_colour, torque_limit, speed_limit, max, min):
         self.port_handler = port_handler
         self.packet_handler = packet_handler
 
-        self.LED_colour = LED_colour
         self.motor_id = motor_id
+        self.LED_colour = LED_colour
+        
 
         self.torque_limit = torque_limit
         self.speed_limit = speed_limit

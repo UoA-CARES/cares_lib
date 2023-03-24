@@ -23,11 +23,11 @@ class ArucoDetector:
         pitch = validate_angle(math.degrees(pitch))
         yaw   = validate_angle(math.degrees(yaw))
 
-        return roll, pitch, yaw
+        return [roll, pitch, yaw]
 
     def get_pose(self, t_vec, r_vec):
         pose = {}
-        pose["position"] = t_vec
+        pose["position"] = t_vec[0]
         pose["orientation"] = self.get_orientation(r_vec)
         return pose
         
