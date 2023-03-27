@@ -73,7 +73,7 @@ class Servo(object):
             self.process_result(dxl_comm_result, dxl_error, message=f"successfully told to move to {self.target_position}")
 
             start_time = time.perf_counter()
-            while wait and self.is_moving() and time.perf_time() < start_time + timeout:
+            while wait and self.is_moving() and time.perf_counter() < start_time + timeout:
                 pass
 
             return self.current_position()
