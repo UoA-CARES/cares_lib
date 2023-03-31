@@ -2,6 +2,7 @@ import logging
 import time
 import dynamixel_sdk as dxl
 from enum import Enum
+import ctypes
 
 """
 The servo class contains methods used to change attributes of the servo motors
@@ -10,6 +11,7 @@ Beth Cutler
 """
 
 DXL_MOVING_STATUS_THRESHOLD = 10
+
 
 class ControlMode(Enum):
     WHEEL = 1
@@ -28,24 +30,15 @@ class Servo(object):
         "moving_speed": 32,
         "torque_limit": 35,
         "current_position": 37,
-        "current_velocity": 38,
+        "current_velocity": 39,
         "current_load": 41,
         "moving": 49,
     }
 
-    def __init__(
-        self,
-        port_handler,
-        packet_handler,
-        motor_id,
-        LED_colour,
-        torque_limit,
-        max_velocity,
-        max,
-        min,
-    ):
+    def __init__(self, port_handler, packet_handler, protocol, motor_id, LED_colour, torque_limit, max_velocity, max, min):
         self.port_handler = port_handler
         self.packet_handler = packet_handler
+        self.protocol = protocol
 
         self.motor_id = motor_id
         self.LED_colour = LED_colour
@@ -67,21 +60,27 @@ class Servo(object):
         except DynamixelServoError as error:
             raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to enable") from error
 
+    def state(self):
+        current_state = {}
+        current_state["position"] = self.current_position()
+        current_state["velocity"] = self.velocity_to_int(self.current_velocity())
+        current_state["load"]     = self.current_load()
+ 
+        return current_state
+
     def step(self):
-        #TODO: still need testing
         control_mode = self.control_mode()
         if control_mode == ControlMode.JOINT.value:
             return
     
         try:
-            current_position = self.current_position()
-            current_velocity = Servo.velocity_to_int(self.current_velocity())
+            current_state    = self.state()
+            current_position = current_state["position"]
+            current_velocity = Servo.velocity_to_int(current_state["velocity"])
 
             logging.debug(f"Current Velocity {current_velocity} : {self.min} < {current_position} < {self.max}")
-            if (current_position >= self.max) and (current_velocity > 0):
-                self.move_velocity(0)
-                logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, stopping servo")
-            elif (current_position <= self.min) and (current_velocity < 0):
+            if (current_position >= self.max and current_velocity > 0) or \
+               (current_position <= self.min and current_velocity < 0):
                 self.move_velocity(0)
                 logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, stopping servo")
 
@@ -137,25 +136,15 @@ class Servo(object):
             raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed while moving") from error
 
     def move_velocity(self, target_velocity):
-        if abs(target_velocity) > self.max_velocity:
+        if not self.verify_velocity(target_velocity):
             error_message = f"Dynamixel#{self.motor_id}: Target velocity {target_velocity} over max velocity {self.max_velocity}"
             logging.error(error_message)
             raise DynamixelServoError(error_message)
         
         try:
-            mode = self.control_mode()
-            logging.info(f"Before {mode}")
             self.set_control_mode(ControlMode.WHEEL.value)
-            mode = self.control_mode()
-            logging.info(f"After {mode}")
 
-            current_position = self.current_position()
-            if (current_position >= self.max) and (target_velocity > 0):
-                logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, set velocity unsuccessful")
-                return self.current_velocity()
-            
-            if (current_position <= self.min) and (target_velocity < 0):
-                logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, set velocity unsuccessful")
+            if not self.validate_movement(target_velocity):
                 return self.current_velocity()
             
             processed_velocity = Servo.velocity_to_bytes(target_velocity)
@@ -171,6 +160,62 @@ class Servo(object):
             return self.move(self.current_position())
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to stop"
+            logging.error(error_message)
+            raise DynamixelServoError(error_message) from error
+
+    def is_moving(self):
+        try:
+            current_position = self.current_position()
+            target_position  = self.current_target_position()
+
+            logging.debug(f"Dynamixel#{self.motor_id} is at position {current_position} and moving to {target_position}")
+            return abs(current_position - target_position) > DXL_MOVING_STATUS_THRESHOLD
+        except DynamixelServoError as error:
+            error_message = f"Dynamixel#{self.motor_id}: failed to check if moving"
+            logging.error(error_message)
+            raise DynamixelServoError(error_message) from error
+
+    def current_position(self):
+        try:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["current_position"])
+            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured position {data_read}")
+            return data_read
+        except DynamixelServoError as error:
+            error_message = (f"Dynamixel#{self.motor_id}: failed to read current poisiton")
+            logging.error(error_message)
+            raise DynamixelServoError(error_message) from error
+        
+    def current_target_position(self):
+        try:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["goal_position"])
+            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current goal position {data_read}")
+            return data_read
+        except DynamixelServoError as error:
+            error_message = (f"Dynamixel#{self.motor_id}: failed to read current goal poisiton")
+            logging.error(error_message)
+            raise DynamixelServoError(error_message) from error
+
+    def current_velocity(self):
+        try:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["current_velocity"])
+            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
+            return data_read
+        except DynamixelServoError as error:
+            error_message = (f"Dynamixel#{self.motor_id}: failed to read current velocity")
+            logging.error(error_message)
+            raise DynamixelServoError(error_message) from error
+
+    def current_load(self):
+        try:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["current_load"])
+            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current load is {data_read}")
+            # Convert it to a value between 0 - 1023 regardless of direction and then maps this between 0-100
+            # See section 2.4.21 link for details on why this is required
+            # https://emanual.robotis.com/docs/en/dxl/x/xl320/
+            current_load_percent = ((data_read % 1023) / 1023) * 100
+            return current_load_percent
+        except DynamixelServoError as error:
+            error_message = f"Dynamixel#{self.motor_id}: failed to read load"
             logging.error(error_message)
             raise DynamixelServoError(error_message) from error
 
@@ -219,62 +264,6 @@ class Servo(object):
             logging.error(error_message)
             raise DynamixelServoError(error_message) from error
 
-    def is_moving(self):
-        try:
-            current_position = self.current_position()
-            target_position  = self.current_target_position()
-
-            logging.debug(f"Dynamixel#{self.motor_id} is at position {current_position} and moving to {target_position}")
-            return abs(current_position - target_position) > DXL_MOVING_STATUS_THRESHOLD
-        except DynamixelServoError as error:
-            error_message = f"Dynamixel#{self.motor_id}: failed to check if moving"
-            logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
-
-    def current_position(self):
-        try:
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["current_position"])
-            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured position {data_read}")
-            return data_read
-        except DynamixelServoError as error:
-            error_message = (f"Dynamixel#{self.motor_id}: failed to read current poisiton")
-            logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
-        
-    def current_target_position(self):
-        try:
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["goal_position"])
-            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current goal position {data_read}")
-            return data_read
-        except DynamixelServoError as error:
-            error_message = (f"Dynamixel#{self.motor_id}: failed to read current goal poisiton")
-            logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
-
-    def current_velocity(self):
-        try:
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["moving_speed"])
-            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
-            return data_read
-        except DynamixelServoError as error:
-            error_message = (f"Dynamixel#{self.motor_id}: failed to read current velocity")
-            logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
-
-    def current_load(self):
-        try:
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, Servo.addresses["current_load"])
-            self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current load is {data_read}")
-            # Convert it to a value between 0 - 1023 regardless of direction and then maps this between 0-100
-            # See section 2.4.21 link for details on why this is required
-            # https://emanual.robotis.com/docs/en/dxl/x/xl320/
-            current_load_percent = ((data_read % 1023) / 1023) * 100
-            return current_load_percent
-        except DynamixelServoError as error:
-            error_message = f"Dynamixel#{self.motor_id}: failed to read load"
-            logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
-
     def verify_step(self, step):
         return self.min <= step <= self.max
     
@@ -283,15 +272,14 @@ class Servo(object):
             error_message = f"Dynamixel#{self.motor_id}: Target velocity {velocity} over max velocity {self.max_velocity}"
             logging.warn(error_message)
             return False
-        
+        return True
+    
+    def validate_movement(self, target_velocity):
         current_position = self.current_position()
-        if (current_position >= self.max) and (velocity > 0):
-            logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, set velocity unsuccessful")
+        if (current_position >= self.max and target_velocity > 0) or \
+           (current_position <= self.min and target_velocity < 0):
+            logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, setting velocity not valid")
             return False
-        elif (current_position <= self.min) and (velocity < 0):
-            logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, set velocity unsuccessful")
-            return False
-        
         return True
 
     def process_result(self, dxl_comm_result, dxl_error, message="success"):
@@ -321,8 +309,8 @@ class Servo(object):
         
     @staticmethod
     def velocity_to_int(target_velocity):
-        if target_velocity >= 1024:
-            return -(target_velocity-1024)
+        if target_velocity >= 1024:return -(target_velocity-1024)
+            
         else:
             return target_velocity 
 
