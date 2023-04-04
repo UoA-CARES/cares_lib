@@ -11,7 +11,9 @@ Beth Cutler
 DXL_MOVING_STATUS_THRESHOLD = 10
 
 class DynamixelServoError(IOError):
-    pass
+    def __init__(self, servo, message):
+        self.servo = servo
+        super().__init__(message)
 
 class Servo(object):
     addresses = {
@@ -48,7 +50,9 @@ class Servo(object):
             model_number, dxl_comm_result, dxl_error = self.packet_handler.ping(self.port_handler, self.motor_id)
             self.process_result(dxl_comm_result, dxl_error, message=f"successfully pinged Dynamixel#{self.motor_id} as model {model_number}")
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to ping") from error
+            message = f"Dynamixel#{self.motor_id}: failed to ping"
+            logging.error(message)
+            raise DynamixelServoError(self, message) from error
 
     def enable(self):
         try:
@@ -58,13 +62,14 @@ class Servo(object):
             self.enable_torque()
             self.turn_on_LED()
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to enable") from error
+            error_message = f"Dynamixel#{self.motor_id}: failed to enable"
+            raise DynamixelServoError(self, error_message) from error
 
     def move(self, target_position, wait=True, timeout=5):
         if not self.verify_step(target_position):
             error_message = f"Dynamixel#{self.motor_id}: Target position {target_position} is out of bounds of min {self.min} max {self.max}"
             logging.error(error_message)
-            raise DynamixelServoError(error_message)
+            raise DynamixelServoError(self, error_message)
 
         try:
             self.target_position = target_position
@@ -78,7 +83,9 @@ class Servo(object):
 
             return self.current_position()
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed while moving") from error
+            error_message = f"Dynamixel#{self.motor_id}: failed while moving"
+            logging.error(error_message)
+            raise DynamixelServoError(self, error_message) from error
 
     def stop_moving(self):
         try:
@@ -86,7 +93,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to stop"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def turn_on_LED(self):
         try:
@@ -95,7 +102,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to turn LED on"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def limit_torque(self):
         try:
@@ -104,7 +111,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to limit torque"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def enable_torque(self):
         try:
@@ -113,7 +120,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to enable torque"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def disable_torque(self):
         try:
@@ -122,7 +129,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to disable torque"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def limit_speed(self):
         try:
@@ -131,7 +138,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to limit speed"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def is_moving(self):
         try:
@@ -141,7 +148,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to check if moving"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def current_position(self):
         try:
@@ -151,7 +158,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to read current poisiton"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def current_load(self): 
         try:
@@ -165,7 +172,7 @@ class Servo(object):
         except DynamixelServoError as error:
             error_message = f"Dynamixel#{self.motor_id}: failed to read load"
             logging.error(error_message)
-            raise DynamixelServoError(error_message) from error
+            raise DynamixelServoError(self, error_message) from error
 
     def verify_step(self, step):
         return self.min <= step <= self.max
@@ -174,7 +181,7 @@ class Servo(object):
         if dxl_comm_result != dxl.COMM_SUCCESS:
             error_message = f"Dynamixel#{self.motor_id} {self.packet_handler.getTxRxResult(dxl_comm_result)} {self.packet_handler.getRxPacketError(dxl_error)}"
             logging.error(error_message)
-            raise DynamixelServoError(error_message)
+            raise DynamixelServoError(self, error_message)
 
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
         
