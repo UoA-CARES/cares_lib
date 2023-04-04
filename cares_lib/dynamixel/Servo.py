@@ -87,7 +87,9 @@ class Servo(object):
                 logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, stopping servo")
 
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed during step") from error
+            error_message = f"Dynamixel#{self.motor_id}: failed during step"
+            logging.error(error_message)
+            raise DynamixelServoError(self, error_message) from error
 
     def ping(self):
         try:
@@ -104,7 +106,9 @@ class Servo(object):
             self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully read control mode as {current_mode}")
             return current_mode
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed to read control mode") from error
+            error_message = f"Dynamixel#{self.motor_id}: failed to read control mode"
+            logging.error(error_message)
+            raise DynamixelServoError(self, error_message) from error
 
     def set_control_mode(self, new_mode):
         try:
@@ -159,7 +163,9 @@ class Servo(object):
             
             return self.current_velocity()
         except DynamixelServoError as error:
-            raise DynamixelServoError(f"Dynamixel#{self.motor_id}: failed while moving") from error
+            error_message = f"Dynamixel#{self.motor_id}: failed while moving"
+            logging.error(error_message)
+            raise DynamixelServoError(self, error_message) from error
 
     def stop_moving(self):
         try:
