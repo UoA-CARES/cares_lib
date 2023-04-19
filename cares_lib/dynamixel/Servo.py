@@ -242,7 +242,7 @@ class Servo(object):
         return True
 
     def process_result(self, dxl_comm_result, dxl_error, message="success"):
-        if (dxl_comm_result != dxl.COMM_SUCCESS) or (dxl_error != 0):
+        if (dxl_comm_result != dxl.COMM_SUCCESS): # or (dxl_error != 0): ignore hardware issues for now
             error_message = f"Dynamixel#{self.motor_id} {self.packet_handler.getTxRxResult(dxl_comm_result)} {self.packet_handler.getRxPacketError(dxl_error)}"
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
@@ -261,11 +261,9 @@ class Servo(object):
     
     @staticmethod
     def velocity_to_bytes(target_velocity):
-        # If a value in the range of 0~1,023 is used, it is stopped by setting to 0 while rotating to CCW direction. 
-        # If a value in the range of 1,024~2,047 is used, it is stopped by setting to 1,024 while rotating to CW direction.
         if target_velocity < 0:
             return abs(target_velocity) + 1024#CCW 0-1023
-        return target_velocity#CW 1024-2047
+        return target_velocity #CW 1024-2047
         
     @staticmethod
     def velocity_to_int(target_velocity):
