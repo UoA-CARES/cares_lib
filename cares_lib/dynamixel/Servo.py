@@ -64,6 +64,9 @@ class Servo(object):
         self.max = max
         self.min = min
 
+        self.total_results = 0
+        self.dxl_errors = 0
+
     @exception_handler("Failed to enable")
     def enable(self):
         self.disable_torque()
@@ -242,11 +245,21 @@ class Servo(object):
         return True
 
     def process_result(self, dxl_comm_result, dxl_error, message="success"):
+        self.total_results += 1
+        if (dxl_error != 0):
+            self.dxl_errors += 1
+            error_message = f"Dynamixel#{self.motor_id} {self.packet_handler.getRxPacketError(dxl_error)} ({self.dxl_errors}/{self.total_results})"
+            logging.error(error_message)
+
+            self.dxl_error_file = open(f"servo_errors/dxl_error_#ID{self.motor_id}.txt", "w")
+            self.dxl_error_file.write(f"{error_message}. (total dxl errors:{self.dxl_errors}, total results:{self.total_results})" + "\n")
+            self.dxl_error_file.close()
+
         if (dxl_comm_result != dxl.COMM_SUCCESS): # or (dxl_error != 0): ignore hardware issues for now
             error_message = f"Dynamixel#{self.motor_id} {self.packet_handler.getTxRxResult(dxl_comm_result)} {self.packet_handler.getRxPacketError(dxl_error)}"
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
-    
+            
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
 
     @staticmethod
