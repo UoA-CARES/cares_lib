@@ -31,7 +31,7 @@ class ArucoDetector:
         pose["orientation"] = self.get_orientation(r_vec)
         return pose
         
-    def get_marker_poses(self, image, camera_matrix, camera_distortion):
+    def get_marker_poses(self, image, camera_matrix, camera_distortion, display=True):
         marker_poses = {}
 
         (corners, ids, rejected_points) = cv2.aruco.detectMarkers(
@@ -50,8 +50,9 @@ class ArucoDetector:
                 cv2.drawFrameAxes(image_copy, camera_matrix,
                                camera_distortion, r_vecs[i], t_vecs[i], self.marker_size/2.0, 3)
 
-            cv2.imshow("Frame", image_copy)
-            cv2.waitKey(100)
+            if display:
+                cv2.imshow("Frame", image_copy)
+                cv2.waitKey(100)
 
             for i in range(0, len(r_vecs)):
                 id = ids[i][0]
