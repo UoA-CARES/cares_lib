@@ -97,7 +97,7 @@ class Servo(object):
     def state(self):
         current_state = {}
         current_state["position"] = self.current_position()
-        if self.motor_id != 10:
+        if self.model == "XL-320":
             current_state["velocity"] = self.velocity_to_int(self.current_velocity())
             current_state["load"]     = self.current_load()
     
@@ -141,7 +141,7 @@ class Servo(object):
             
     @exception_handler("Failed while moving")
     def move(self, target_position, wait=True, timeout=5):
-        if not self.verify_step(target_position) and self.model == "XL-320":
+        if not self.verify_step(target_position):
             error_message = f"Dynamixel#{self.motor_id}: Target position {target_position} is out of bounds of min {self.min} max {self.max}"
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
@@ -285,25 +285,17 @@ class Servo(object):
             
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
 
-    @staticmethod
-    def step_to_angle_300(step):
-        # 0 to 1023 steps to -150 to 150 degrees
-        return (step - 511.5) / 3.41
+    def step_to_angle(self, step):
+        if self.model == "XL430-W250-T":
+            return ((step-2048)%4096)*360/4096
+        elif self.model == "XL-320":
+            return (step - 511.5) / 3.41
 
-    @staticmethod
-    def angle_to_step_300(angle):
-        #  -150 to 150 degrees to 0 to 1023 steps
-        return (3.41 * angle) + 511.5
-    
-    @staticmethod
-    def step_to_angle_360(step):
-        # 0 to 4095 steps to -180 to 180 degrees
-        return ((step-2048)%4096)*360/4096
-
-    @staticmethod
-    def angle_to_step_360(angle):
-        #  -180 to 180 degrees to 0 to 4095 steps
-        return (angle*4096/360+2048)%4096
+    def angle_to_step(self, angle):
+        if self.model == "XL430-W250-T":
+            return (angle*4096/360+2048)%4096
+        elif self.model == "XL-320":
+            return (3.41 * angle) + 511.5
     
     @staticmethod
     def velocity_to_bytes(target_velocity):
