@@ -193,7 +193,11 @@ class Servo(object):
 
     @exception_handler("Failed to read current position")
     def current_position(self): 
-        data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
+        if self.model == "XL430-W250-T":
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
+        else:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
+
         self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured position {data_read}")
         return data_read 
 
@@ -305,8 +309,8 @@ class Servo(object):
         
     @staticmethod
     def velocity_to_int(target_velocity):
-        if target_velocity >= 1024:return -(target_velocity-1024)
-            
+        if target_velocity >= 1024:
+            return -(target_velocity-1024)
         else:
             return target_velocity 
 
