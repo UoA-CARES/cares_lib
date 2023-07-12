@@ -61,6 +61,15 @@ addresses["XL430-W250-T"] = {
     "current_position": 132,
     "current_velocity": 128,
     "moving": 122}
+addresses["XL330-M077-T"] = {
+    "control_mode": 11,
+    "shutdown": 63,
+    "torque_enable": 64,
+    "led": 65,
+    "moving_speed": 128,
+    "current_position": 132,
+    "goal_position": 116,
+    "moving": 122}
 
 class Servo(object):
     def __init__(self, port_handler, packet_handler, protocol, motor_id, LED_colour, torque_limit, max_velocity, max, min, model="XL-320"):
@@ -193,7 +202,7 @@ class Servo(object):
 
     @exception_handler("Failed to read current position")
     def current_position(self): 
-        if self.model == "XL430-W250-T":
+        if self.model == "XL330-M077-T":
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
         else:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
@@ -203,7 +212,7 @@ class Servo(object):
 
     @exception_handler("Failed to read current goal position")
     def current_target_position(self): 
-        if self.model == "XL430-W250-T":
+        if self.model == "XL330-M077-T":
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"])
         else:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"])
@@ -294,12 +303,17 @@ class Servo(object):
             return ((step-2048)%4096)*360/4096
         elif self.model == "XL-320":
             return (step - 511.5) / 3.41
+        elif self.model == "XL330-M077-T":
+            return ((step-2048)%4096)*360/4096
 
     def angle_to_step(self, angle):
         if self.model == "XL430-W250-T":
             return (angle*4096/360+2048)%4096
         elif self.model == "XL-320":
             return (3.41 * angle) + 511.5
+        elif self.model == "XL330-M077-T":
+            return (angle*4096/360+2048)%4096
+    
     
     @staticmethod
     def velocity_to_bytes(target_velocity):
