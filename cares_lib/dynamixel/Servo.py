@@ -155,7 +155,7 @@ class Servo(object):
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
  
-        if self.model == "XL430-W250-T":
+        if self.model == "XL430-W250-T" or self.model == "XL330-M077-T":
             self.set_control_mode(ControlMode.POSITION.value)
             dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
         else:
