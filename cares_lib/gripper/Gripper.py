@@ -63,7 +63,7 @@ class Gripper(object):
                 led = id % 7
                 self.servos[id] = Servo(self.port_handler, self.packet_handler, self.protocol, id, led,
                                         config.torque_limit, config.speed_limit, self.max_values[id - 1],
-                                        self.min_values[id - 1])
+                                        self.min_values[id - 1], config.servo_type)
             self.setup_servos()
         except (GripperError, DynamixelServoError) as error:
             raise GripperError(f"Gripper#{self.gripper_id}: Failed to initialise servos") from error
@@ -105,8 +105,8 @@ class Gripper(object):
     def state(self):
         current_state = {}
         current_state["positions"] = self.current_positions()
-        current_state["velocities"] = self.current_velocity()
-        current_state["loads"] = self.current_load()
+        # current_state["velocities"] = self.current_velocity()
+        # current_state["loads"] = self.current_load()
         return current_state        
 
     @exception_handler("Failed to step")
@@ -171,21 +171,22 @@ class Gripper(object):
         self.servos[servo_id].move_velocity(target_velocity)
 
     @exception_handler("Failed while trying to move by steps")
-    def move(self, steps, wait=True, timeout=5):
+    def move(self, steps, wait=True, timeout=2):
         if not self.verify_steps(steps):
             error_message = f"Gripper#{self.gripper_id}: The move command provided is out of bounds: Step {steps}"
             logging.error(error_message)
             raise ValueError(error_message)
 
-        self.move_velocity(np.full(self.num_motors,self.speed_limit),True) # only for velocity
-        self.set_control_mode(np.full(self.num_motors,ControlMode.JOINT.value))
+        # self.move_velocity(np.full(self.num_motors,self.speed_limit),True) # only for velocity
+        # self.set_control_mode(np.full(self.num_motors,ControlMode.JOINT.value))
         
         for servo_id, servo in self.servos.items():
-            servo.set_control_mode(ControlMode.JOINT.value)
+            # servo.set_control_mode(ControlMode.JOINT.value)
             target_position = steps[servo_id - 1]
 
-            param_goal_position = [dxl.DXL_LOBYTE(target_position), dxl.DXL_HIBYTE(target_position)]
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_position"], 2,
+            # param_goal_position = [dxl.DXL_LOBYTE(target_position), dxl.DXL_HIBYTE(target_position)]
+            param_goal_position = [dxl.DXL_LOBYTE(dxl.DXL_LOWORD(target_position)), dxl.DXL_HIBYTE(dxl.DXL_LOWORD(target_position)), dxl.DXL_LOBYTE(dxl.DXL_HIWORD(target_position)), dxl.DXL_HIBYTE(dxl.DXL_HIWORD(target_position))]
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_position"], 4,
                                                         param_goal_position)
 
             if not dxl_result:
