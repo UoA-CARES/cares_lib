@@ -250,11 +250,11 @@ class Servo(object):
         self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
         
         statuses = [] # an array of errors that occured 
-        if(data_read & 0b00000001 == 0b00000001): # 
+        if(data_read & 1<<ShutdownStatus.OVERLOAD == 1): 
             statuses.append(ShutdownStatus.OVERLOAD)
-        elif(data_read & 0b00000010 == 0b00000010): # 
+        elif(data_read & 1<<ShutdownStatus.OVERHEAT == 2): 
             statuses.append(ShutdownStatus.OVERHEAT)
-        elif(data_read & 0b00000100 == 0b00000100): 
+        elif(data_read & 1<<ShutdownStatus.INPUT_VOLTAGE == 4): 
             statuses.append(ShutdownStatus.INPUT_VOLTAGE)
 
         return statuses
