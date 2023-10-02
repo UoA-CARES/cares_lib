@@ -66,6 +66,27 @@ addresses["XL430-W250-T"] = {
     "current_position": 132,
     "current_velocity": 128,
     "moving": 122}
+addresses["XC330-T288-T"] = {        
+    "control_mode": 11,
+    "shutdown": 63,
+    "torque_enable": 64,
+    "led": 65,
+    "goal_position": 116,
+    "moving_speed": 104,
+    "current_position": 132,
+    "current_velocity": 128,
+    "moving": 122}
+addresses["XM430-W350"] = {        
+    "control_mode": 11,
+    "shutdown": 63,
+    "torque_enable": 64,
+    "led": 65,
+    "goal_position": 116,
+    "moving_speed": 104,
+    "current_position": 132,
+    "current_velocity": 128,
+    "moving": 122}
+
 
 class Servo(object):
     def __init__(self, port_handler, packet_handler, protocol, motor_id, LED_colour, torque_limit, max_velocity, max, min, model="XL-320"):
@@ -86,7 +107,7 @@ class Servo(object):
 
         self.total_results = 0
         self.dxl_errors = 0 
-
+        
         self.addresses = addresses[self.model]
 
     @exception_handler("Failed to enable")
