@@ -33,6 +33,11 @@ class ControlMode(Enum):
     EXTENDED_POSITION = 4
     PWM_CONTROL = 16
 
+class ShutdownStatus(Enum):
+    OVERLOAD = 0
+    OVERHEAT = 1
+    INPUT_VOLTAGE = 2
+
 class DynamixelServoError(IOError):
     def __init__(self, servo, message):
         self.servo = servo
@@ -216,6 +221,22 @@ class Servo(object):
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_velocity"])
         self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
         return data_read 
+    
+    @exception_handler("Failed to read shutdown status")
+    def current_shutdown(self): 
+        # shutdown is 1 byte
+        data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["shutdown"])
+        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
+        
+        statuses = [] # an array of errors that occured 
+        if(data_read & 0b00000001 == 0b00000001): # 
+            statuses.append(ShutdownStatus.OVERLOAD)
+        elif(data_read & 0b00000010 == 0b00000010): # 
+            statuses.append(ShutdownStatus.OVERHEAT)
+        elif(data_read & 0b00000100 == 0b00000100): 
+            statuses.append(ShutdownStatus.INPUT_VOLTAGE)
+
+        return statuses
 
     @exception_handler("Failed to read current load")
     def current_load(self): 

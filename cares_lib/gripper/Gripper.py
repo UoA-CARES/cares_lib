@@ -3,11 +3,9 @@ import dynamixel_sdk as dxl
 import time
 
 import numpy as np
-import dynamixel_sdk as dxl
 from functools import wraps
 
 from cares_lib.dynamixel.Servo import Servo, DynamixelServoError, ControlMode
-
 from configurations import GripperConfig
 
 MOVING_STATUS_THRESHOLD = 20
@@ -107,6 +105,7 @@ class Gripper(object):
         current_state["positions"] = self.current_positions()
         current_state["velocities"] = self.current_velocity()
         current_state["loads"] = self.current_load()
+        current_state["shutdowns"] = self.current_shutdown()
         return current_state        
 
     @exception_handler("Failed to step")
@@ -139,6 +138,9 @@ class Gripper(object):
     @exception_handler("Failed to read current current control mode")
     def current_control_mode(self):
         return self.bulk_read("control_mode", 1)
+    
+    def current_shutdown(self):
+        return self.bulk_read("shutdown",1)
     
     @exception_handler("Failed to check if moving")
     def is_moving(self):
