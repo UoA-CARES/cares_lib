@@ -242,22 +242,6 @@ class Servo(object):
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_velocity"])
         self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
         return data_read 
-    
-    @exception_handler("Failed to read shutdown status")
-    def current_shutdown(self): 
-        # shutdown is 1 byte
-        data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["shutdown"])
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
-        
-        statuses = [] # an array of errors that occured 
-        if(data_read & 1<<ShutdownStatus.OVERLOAD == 1): 
-            statuses.append(ShutdownStatus.OVERLOAD)
-        elif(data_read & 1<<ShutdownStatus.OVERHEAT == 2): 
-            statuses.append(ShutdownStatus.OVERHEAT)
-        elif(data_read & 1<<ShutdownStatus.INPUT_VOLTAGE == 4): 
-            statuses.append(ShutdownStatus.INPUT_VOLTAGE)
-
-        return statuses
 
     @exception_handler("Failed to read current load")
     def current_load(self): 
@@ -268,6 +252,15 @@ class Servo(object):
         # https://emanual.robotis.com/docs/en/dxl/x/xl320/
         current_load_percent = ((data_read % 1023) / 1023) * 100
         return current_load_percent 
+    
+    @exception_handler("Failed to read shutdown status")
+    def read_shutdown_errors(self): 
+        data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["shutdown"])
+        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
+        
+        statuses = self.process_shutdown(data_read)
+
+        return statuses
 
     @exception_handler("Failed to turn LED on")
     def turn_on_LED(self): 
@@ -330,6 +323,17 @@ class Servo(object):
             raise DynamixelServoError(self, error_message)
             
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
+
+    def process_shutdown(self, data_read):                 
+        statuses = [] # an array of errors that occured 
+        if(data_read & 1<<ShutdownStatus.OVERLOAD.value == 1): 
+            statuses.append(ShutdownStatus.OVERLOAD.value)
+        elif(data_read & 1<<ShutdownStatus.OVERHEAT.value == 2): 
+            statuses.append(ShutdownStatus.OVERHEAT.value)
+        elif(data_read & 1<<ShutdownStatus.INPUT_VOLTAGE.value == 4): 
+            statuses.append(ShutdownStatus.INPUT_VOLTAGE.value)
+
+        return statuses
 
     def step_to_angle(self, step):
         if self.model == "XL430-W250-T":

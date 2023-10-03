@@ -132,16 +132,18 @@ class Gripper(object):
     def current_velocity(self):
         return self.bulk_read("current_velocity", 2)
 
-    @exception_handler("Failed to read current current load")
+    @exception_handler("Failed to read current load")
     def current_load(self):
         return self.bulk_read("current_load", 2)
 
-    @exception_handler("Failed to read current current control mode")
+    @exception_handler("Failed to read current control mode")
     def current_control_mode(self):
         return self.bulk_read("control_mode", 1)
     
-    def current_shutdown(self):
-        return self.bulk_read("shutdown",1)
+    @exception_handler("Failed to read shutdown")
+    def read_shutdown_errors(self):
+        return self.bulk_read("shutdown",1) 
+    
     
     @exception_handler("Failed to check if moving")
     def is_moving(self):
