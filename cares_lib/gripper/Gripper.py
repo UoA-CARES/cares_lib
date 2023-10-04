@@ -131,6 +131,10 @@ class Gripper(object):
     @exception_handler("Failed to read current velocity")
     def current_velocity(self):
         return self.bulk_read("current_velocity", 2)
+    
+    @exception_handler("Failed to read goal velocity")
+    def goal_velocity(self):
+        return self.bulk_read("goal_velocity", 2)
 
     @exception_handler("Failed to read current load")
     def current_load(self):
@@ -141,9 +145,12 @@ class Gripper(object):
         return self.bulk_read("control_mode", 1)
     
     @exception_handler("Failed to read shutdown")
-    def read_shutdown_errors(self):
+    def read_shutdown(self):
         return self.bulk_read("shutdown",1) 
-    
+
+    @exception_handler("Failed to read hardware errors")
+    def read_hardware_errors(self):
+        return self.bulk_read("hardware_error_status",1) 
     
     @exception_handler("Failed to check if moving")
     def is_moving(self):
@@ -182,11 +189,11 @@ class Gripper(object):
             logging.error(error_message)
             raise ValueError(error_message)
 
-        # self.move_velocity(np.full(self.num_motors,self.speed_limit),True) # only for velocity
+        # uncomment if use move_velocity_wheel
+        # self.move_velocity(np.full(self.num_motors,self.speed_limit),True)
         # self.set_control_mode(np.full(self.num_motors,ControlMode.JOINT.value))
         
         for servo_id, servo in self.servos.items():
-            # servo.set_control_mode(ControlMode.JOINT.value)
             target_position = steps[servo_id - 1]
 
             # param_goal_position = [dxl.DXL_LOBYTE(target_position), dxl.DXL_HIBYTE(target_position)]
@@ -214,26 +221,64 @@ class Gripper(object):
         self.group_bulk_write.clearParam()
 
     @exception_handler("Failed while trying to move by velocity")
-    def move_velocity(self, velocities, set_only):
+    def set_velocity(self, velocities):
         if not self.verify_velocity(velocities):
             error_message = f"Gripper#{self.gripper_id}: The move velocity command provided is out of bounds velocities {velocities}"
             logging.error(error_message)
             raise ValueError(error_message)
-        
-        if set_only:
-            self.set_control_mode(np.full(self.num_motors,ControlMode.JOINT.value))
-        else:
-            self.set_control_mode(np.full(self.num_motors,ControlMode.WHEEL.value))
 
         for servo_id, servo in self.servos.items():
             target_velocity = velocities[servo_id-1]
             target_velocity_b = Servo.velocity_to_bytes(target_velocity)
 
-            if not set_only and not servo.validate_movement(target_velocity):
+            param_goal_velocity = [dxl.DXL_LOBYTE(target_velocity_b), dxl.DXL_HIBYTE(target_velocity_b)]
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_velocity"], 2,
+                                                        param_goal_velocity)
+
+            if not dxl_result:
+                error_message = f"Gripper#{self.gripper_id}: Failed to setup set velocity command for Dynamixel#{servo_id}"
+                logging.error(error_message)
+                raise GripperError(error_message)
+
+        dxl_comm_result = self.group_bulk_write.txPacket()
+        if dxl_comm_result != dxl.COMM_SUCCESS:
+            error_message = f"Gripper#{self.gripper_id}: Failed to send set velocity command to gripper"
+            logging.error(error_message)
+            raise GripperError(error_message)
+
+        logging.debug(f"Gripper#{self.gripper_id}: Sending move velocity command succeeded")
+        self.group_bulk_write.clearParam()
+
+    @exception_handler("Failed while trying to move by velocity joint")
+    def move_velocity_joint(self, velocities):
+        # self.stop_moving()
+        steps = []
+        for servo_id, servo in self.servos.items():
+            step = servo.min if velocities[servo_id-1] < 0 else servo.max
+            steps.append(step)
+        
+        self.set_velocity(velocities)
+        print(self.goal_velocity())
+        self.move(steps, wait=False)
+
+    @exception_handler("Failed while trying to move by velocity wheel")
+    def move_velocity_wheel(self, velocities):
+        if not self.verify_velocity(velocities):
+            error_message = f"Gripper#{self.gripper_id}: The move velocity command provided is out of bounds velocities {velocities}"
+            logging.error(error_message)
+            raise ValueError(error_message)
+        
+        self.set_control_mode(np.full(self.num_motors,ControlMode.WHEEL.value))
+
+        for servo_id, servo in self.servos.items():
+            target_velocity = velocities[servo_id-1]
+            target_velocity_b = Servo.velocity_to_bytes(target_velocity)
+
+            if not servo.validate_movement(target_velocity):
                 continue
 
             param_goal_velocity = [dxl.DXL_LOBYTE(target_velocity_b), dxl.DXL_HIBYTE(target_velocity_b)]
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["moving_speed"], 2,
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_velocity"], 2,
                                                         param_goal_velocity)
 
             if not dxl_result:

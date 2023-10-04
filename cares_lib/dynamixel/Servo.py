@@ -33,10 +33,6 @@ class ControlMode(Enum):
     EXTENDED_POSITION = 4
     PWM_CONTROL = 16
 
-class ShutdownStatus(Enum):
-    OVERLOAD = 0
-    OVERHEAT = 1
-    INPUT_VOLTAGE = 2
 
 class DynamixelServoError(IOError):
     def __init__(self, servo, message):
@@ -50,42 +46,63 @@ addresses["XL-320"] = {
     "torque_enable": 24,
     "led": 25,
     "goal_position": 30,
-    "moving_speed": 32,
+    "goal_velocity": 32, # moving_speed
     "torque_limit": 35,
     "current_position": 37,
     "current_velocity": 39,
     "current_load": 41,
-    "moving": 49}
+    "moving": 49,
+    "hardware_error_status": 50,
+    "OVERLOAD": 0,
+    "OVERHEAT": 1,
+    "INPUT_VOLTAGE": 2}
 addresses["XL430-W250-T"] = {        
     "control_mode": 11,
     "shutdown": 63,
     "torque_enable": 64,
     "led": 65,
     "goal_position": 116,
-    "moving_speed": 104,
+    "goal_velocity": 104,
     "current_position": 132,
     "current_velocity": 128,
-    "moving": 122}
+    "moving": 122,
+    "hardware_error_status": 70,
+    "INPUT_VOLTAGE": 0,
+    "OVERHEAT": 2,
+    "MOTOR_ENCODER_ERROR": 3,
+    "ELECTRICAL_SHOCK": 4,
+    "OVERLOAD": 5}
 addresses["XC330-T288-T"] = {        
     "control_mode": 11,
     "shutdown": 63,
     "torque_enable": 64,
     "led": 65,
     "goal_position": 116,
-    "moving_speed": 104,
+    "goal_velocity": 104,
     "current_position": 132,
     "current_velocity": 128,
-    "moving": 122}
+    "moving": 122,
+    "hardware_error_status": 70,
+    "INPUT_VOLTAGE": 0,
+    "OVERHEAT": 2,
+    "ELECTRICAL_SHOCK": 4,
+    "OVERLOAD": 5}
 addresses["XM430-W350"] = {        
     "control_mode": 11,
     "shutdown": 63,
     "torque_enable": 64,
     "led": 65,
     "goal_position": 116,
-    "moving_speed": 104,
+    "goal_velocity": 104,
     "current_position": 132,
     "current_velocity": 128,
-    "moving": 122}
+    "moving": 122,
+    "hardware_error_status": 70,
+    "INPUT_VOLTAGE": 0,
+    "OVERHEAT": 2,
+    "MOTOR_ENCODER_ERROR": 3,
+    "ELECTRICAL_SHOCK": 4,
+    "OVERLOAD": 5}
 
 
 class Servo(object):
@@ -200,7 +217,7 @@ class Servo(object):
             return self.current_velocity()
         
         processed_velocity = Servo.velocity_to_bytes(target_velocity)
-        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["moving_speed"], processed_velocity)
+        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully told to move to at {target_velocity}")
         
         return self.current_velocity() 
@@ -254,11 +271,21 @@ class Servo(object):
         return current_load_percent 
     
     @exception_handler("Failed to read shutdown status")
-    def read_shutdown_errors(self): 
+    def read_shutdown(self): 
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["shutdown"])
         self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
         
         statuses = self.process_shutdown(data_read)
+
+        return statuses
+
+
+    @exception_handler("Failed to read hardware error status")
+    def read_hardware_errors(self): 
+        data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["hardware_error_status"])
+        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured hardware error status {data_read}")
+        
+        statuses = self.process_hardware_error(data_read)
 
         return statuses
 
@@ -269,7 +296,7 @@ class Servo(object):
 
     @exception_handler("Failed to limit speed")
     def limit_speed(self): 
-        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["moving_speed"], self.max_velocity)
+        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], self.max_velocity)
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: has been successfully speed limited")
          
     @exception_handler("Failed to limit torque")
@@ -324,15 +351,21 @@ class Servo(object):
             
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
 
-    def process_shutdown(self, data_read):                 
-        statuses = [] # an array of errors that occured 
-        if(data_read & 1<<ShutdownStatus.OVERLOAD.value == 1): 
-            statuses.append(ShutdownStatus.OVERLOAD.value)
-        elif(data_read & 1<<ShutdownStatus.OVERHEAT.value == 2): 
-            statuses.append(ShutdownStatus.OVERHEAT.value)
-        elif(data_read & 1<<ShutdownStatus.INPUT_VOLTAGE.value == 4): 
-            statuses.append(ShutdownStatus.INPUT_VOLTAGE.value)
 
+
+    def process_hardware_errors(self, data_read):                 
+        statuses = [] # an array of errors that occured 
+        if(data_read & 1<<self.addresses["INPUT_VOLTAGE"]): 
+            statuses.append(self.addresses["INPUT_VOLTAGE"])
+        if(data_read & 1<<self.addresses["OVERHEAT"]): 
+            statuses.append(self.addresses["OVERHEAT"])
+        if(data_read & 1<<self.addresses["OVERLOAD"]):
+            statuses.append(self.addresses["OVERLOAD"])
+
+        if self.model == "XC330-T288-T":    
+            if(data_read & 1<<self.addresses["ELECTRICAL_SHOCK"]): 
+                statuses.append(self.addresses["ELECTRICAL_SHOCK"])
+    
         return statuses
 
     def step_to_angle(self, step):
