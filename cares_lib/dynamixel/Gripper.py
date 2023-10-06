@@ -5,8 +5,9 @@ import time
 import numpy as np
 from functools import wraps
 
-from cares_lib.dynamixel.Servo import Servo, DynamixelServoError, ControlMode
-from configurations import GripperConfig
+from cares_lib.dynamixel.Servo import Servo, DynamixelServoError, OperatingMode
+from cares_lib.dynamixel.servos_addresses import addresses
+from cares_lib.dynamixel.gripper_configuration import GripperConfig
 
 MOVING_STATUS_THRESHOLD = 20
 
@@ -31,7 +32,6 @@ class Gripper(object):
 
         self.config = config
 
-        # Setup Servor handlers
         self.gripper_id = config.gripper_id
 
         self.num_motors = config.num_motors
@@ -45,7 +45,7 @@ class Gripper(object):
         self.device_name = config.device_name
         self.baudrate = config.baudrate
 
-        self.protocol = 2  # NOTE: XL-320 uses protocol 2, update if we ever use other servos
+        self.protocol = 2  # NOTE: All current servos uses protocol 2, update needed
 
         self.port_handler = dxl.PortHandler(self.device_name)
         self.packet_handler = dxl.PacketHandler(self.protocol)
@@ -55,13 +55,16 @@ class Gripper(object):
         self.group_bulk_read = dxl.GroupBulkRead(self.port_handler, self.packet_handler)
 
         self.servos = {}
+        self.servo_type = config.servo_type
+
+        self.velocity_in_pos_control = "moving_speed" if self.servo_type == "XL-320" else "profile_velocity"
 
         try:
             for id in range(1, self.num_motors + 1):
                 led = id % 7
                 self.servos[id] = Servo(self.port_handler, self.packet_handler, self.protocol, id, led,
                                         config.torque_limit, config.speed_limit, self.max_values[id - 1],
-                                        self.min_values[id - 1], config.servo_type)
+                                        self.min_values[id - 1], self.servo_type)
             self.setup_servos()
         except (GripperError, DynamixelServoError) as error:
             raise GripperError(f"Gripper#{self.gripper_id}: Failed to initialise servos") from error
@@ -76,6 +79,7 @@ class Gripper(object):
         self.__init__(self.config)
         logging.info(f"Gripper#{self.gripper_id}: reboot completed")
 
+    @exception_handler("Failed to setup handlers")
     def setup_handlers(self):
         if not self.port_handler.openPort():
             error_message = f"Failed to open port {self.device_name}"
@@ -103,9 +107,8 @@ class Gripper(object):
     def state(self):
         current_state = {}
         current_state["positions"] = self.current_positions()
-        # current_state["velocities"] = self.current_velocity()
-        # current_state["loads"] = self.current_load()
-        current_state["shutdowns"] = self.current_shutdown()
+        current_state["velocities"] = self.current_velocity()
+        current_state["loads"] = self.current_load()
 
         return current_state        
 
@@ -119,38 +122,38 @@ class Gripper(object):
             logging.debug(f"Current Velocity {current_velocity} : {servo.min} < {current_position} < {servo.max}")
             if (current_position >= servo.max and current_velocity > 0) or \
                 (current_position <= servo.min and current_velocity < 0):
-                # logging.warn(f"Dynamixel#{motor_id}: position out of boundry, stopping servo")
+                logging.debug(f"Dynamixel#{motor_id}: position out of boundry, stopping servo")
                 servo.move_velocity(0)
         return state
 
 
     @exception_handler("Failed to read current position")
     def current_positions(self):
-        return self.bulk_read("current_position", 2)
+        return self.bulk_read("current_position")
 
     @exception_handler("Failed to read current velocity")
     def current_velocity(self):
-        return self.bulk_read("current_velocity", 2)
+        return self.bulk_read("current_velocity")
     
     @exception_handler("Failed to read goal velocity")
     def goal_velocity(self):
-        return self.bulk_read("goal_velocity", 2)
+        return self.bulk_read(self.velocity_in_pos_control)
 
     @exception_handler("Failed to read current load")
     def current_load(self):
-        return self.bulk_read("current_load", 2)
+        return self.bulk_read("current_load")
 
-    @exception_handler("Failed to read current control mode")
-    def current_control_mode(self):
-        return self.bulk_read("control_mode", 1)
+    @exception_handler("Failed to read current operating mode")
+    def current_operating_mode(self):
+        return self.bulk_read("operating_mode")
     
     @exception_handler("Failed to read shutdown")
     def read_shutdown(self):
-        return self.bulk_read("shutdown",1) 
+        return self.bulk_read("shutdown") 
 
     @exception_handler("Failed to read hardware errors")
     def read_hardware_errors(self):
-        return self.bulk_read("hardware_error_status",1) 
+        return self.bulk_read("hardware_error_status") 
     
     @exception_handler("Failed to check if moving")
     def is_moving(self):
@@ -191,15 +194,13 @@ class Gripper(object):
 
         # uncomment if use move_velocity_wheel
         # self.move_velocity(np.full(self.num_motors,self.speed_limit),True)
-        # self.set_control_mode(np.full(self.num_motors,ControlMode.JOINT.value))
+        # self.set_operating_mode(np.full(self.num_motors,OperatingMode.JOINT.value))
         
         for servo_id, servo in self.servos.items():
             target_position = steps[servo_id - 1]
 
-            # param_goal_position = [dxl.DXL_LOBYTE(target_position), dxl.DXL_HIBYTE(target_position)]
-            param_goal_position = [dxl.DXL_LOBYTE(dxl.DXL_LOWORD(target_position)), dxl.DXL_HIBYTE(dxl.DXL_LOWORD(target_position)), dxl.DXL_LOBYTE(dxl.DXL_HIWORD(target_position)), dxl.DXL_HIBYTE(dxl.DXL_HIWORD(target_position))]
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_position"], 4,
-                                                        param_goal_position)
+            param_goal_position = servo.data_to_bytes(target_position, servo.addresses["goal_position_length"])
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_position"], servo.addresses["goal_position_length"], param_goal_position)
 
             if not dxl_result:
                 error_message = f"Gripper#{self.gripper_id}: Failed to setup move command for Dynamixel#{servo_id}"
@@ -229,11 +230,10 @@ class Gripper(object):
 
         for servo_id, servo in self.servos.items():
             target_velocity = velocities[servo_id-1]
-            target_velocity_b = Servo.velocity_to_bytes(target_velocity)
+            target_velocity_b = servo.velocity_to_bytes(target_velocity)
 
-            param_goal_velocity = [dxl.DXL_LOBYTE(target_velocity_b), dxl.DXL_HIBYTE(target_velocity_b)]
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_velocity"], 2,
-                                                        param_goal_velocity)
+            param_goal_velocity = servo.data_to_bytes(target_velocity_b, servo.addresses[self.velocity_in_pos_control+"_length"])
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses[self.velocity_in_pos_control], servo.addresses[self.velocity_in_pos_control+"_length"], param_goal_velocity)
 
             if not dxl_result:
                 error_message = f"Gripper#{self.gripper_id}: Failed to setup set velocity command for Dynamixel#{servo_id}"
@@ -251,15 +251,14 @@ class Gripper(object):
 
     @exception_handler("Failed while trying to move by velocity joint")
     def move_velocity_joint(self, velocities):
-        # self.stop_moving()
         steps = []
         for servo_id, servo in self.servos.items():
             step = servo.min if velocities[servo_id-1] < 0 else servo.max
             steps.append(step)
         
+        self.move(steps, wait=False)
         self.set_velocity(velocities)
         print(self.goal_velocity())
-        self.move(steps, wait=False)
 
     @exception_handler("Failed while trying to move by velocity wheel")
     def move_velocity_wheel(self, velocities):
@@ -268,18 +267,17 @@ class Gripper(object):
             logging.error(error_message)
             raise ValueError(error_message)
         
-        self.set_control_mode(np.full(self.num_motors,ControlMode.WHEEL.value))
+        self.set_operating_mode(np.full(self.num_motors,OperatingMode.WHEEL.value))
 
         for servo_id, servo in self.servos.items():
             target_velocity = velocities[servo_id-1]
-            target_velocity_b = Servo.velocity_to_bytes(target_velocity)
+            target_velocity_b = servo.velocity_to_bytes(target_velocity)
 
             if not servo.validate_movement(target_velocity):
                 continue
 
-            param_goal_velocity = [dxl.DXL_LOBYTE(target_velocity_b), dxl.DXL_HIBYTE(target_velocity_b)]
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["goal_velocity"], 2,
-                                                        param_goal_velocity)
+            param_goal_velocity = servo.data_to_bytes(target_velocity, servo.addresses[self.velocity_in_pos_control+"_length"])
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses[self.velocity_in_pos_control], servo.addresses[self.velocity_in_pos_control+"_length"], param_goal_velocity)
 
             if not dxl_result:
                 error_message = f"Gripper#{self.gripper_id}: Failed to setup move velocity command for Dynamixel#{servo_id}"
@@ -324,26 +322,26 @@ class Gripper(object):
     def is_home(self):
         return np.all(np.abs(self.home_sequence[-1] - np.array(self.current_positions())) <= MOVING_STATUS_THRESHOLD)
     
-    @exception_handler("Failed to set control mode")
-    def set_control_mode(self, new_mode):
-        if (new_mode != self.current_control_mode()).all():
+    @exception_handler("Failed to set operating mode")
+    def set_operating_mode(self, new_mode):
+        if (new_mode != self.current_operating_mode()).all():
             self.disable_torque()#disable to set servo parameters
 
             for servo_id, servo in self.servos.items():            
-                dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["control_mode"], 1, [new_mode[servo_id-1]])
+                dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["operating_mode"], 1, [new_mode[servo_id-1]])
 
                 if not dxl_result:
-                    error_message = f"Gripper#{self.gripper_id}: Failed to add control mode param for Dynamixel#{servo_id}"
+                    error_message = f"Gripper#{self.gripper_id}: Failed to add operating mode param for Dynamixel#{servo_id}"
                     logging.error(error_message)
                     raise GripperError(error_message)
 
             dxl_comm_result = self.group_bulk_write.txPacket()
             if dxl_comm_result != dxl.COMM_SUCCESS:
-                error_message = f"Gripper#{self.gripper_id}: failed to send change control mode command to gripper"
+                error_message = f"Gripper#{self.gripper_id}: failed to send change operating mode command to gripper"
                 logging.error(error_message)
                 raise GripperError(error_message)
 
-            logging.debug(f"Gripper#{self.gripper_id}: Change control mode command succeeded")
+            logging.debug(f"Gripper#{self.gripper_id}: Change operating mode command succeeded")
             self.group_bulk_write.clearParam()
 
             self.enable_torque()
@@ -400,8 +398,9 @@ class Gripper(object):
         return True
     
     @exception_handler("Failed to bulk read")
-    def bulk_read(self, address, length):
+    def bulk_read(self, address):
         readings = []
+        length = addresses[self.servo_type][address+"_length"]
         for id, _ in self.servos.items():
             self.bulk_read_addparam(id, address, length)
 
@@ -417,6 +416,7 @@ class Gripper(object):
         self.group_bulk_read.clearParam()
         return readings
 
+    # do the same for length as above and test
     def bulk_read_addparam(self, servo_id, address, length):
         dxl_addparam_result = self.group_bulk_read.addParam(servo_id, self.servos[servo_id].addresses[address], length)
         if not dxl_addparam_result:

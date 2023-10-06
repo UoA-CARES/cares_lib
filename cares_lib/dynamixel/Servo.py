@@ -3,6 +3,7 @@ import time
 import dynamixel_sdk as dxl
 from enum import Enum
 from functools import wraps
+from cares_lib.dynamixel.servos_addresses import addresses
 
 """
 The servo class contains methods used to change attributes of the servo motors
@@ -20,13 +21,13 @@ def exception_handler(error_message):
                 return function(self, *args, **kwargs)
             except DynamixelServoError as error:
                 logging.error(f"Dynamixel#{error.servo.motor_id}: {error_message}")
-                raise DynamixelServoError(error.servo, f"Dynamixel#{error.servo.motor_id}: {error_message}") from error
+                raise DynamixelServoError(error.servo, message=f"Dynamixel#{error.servo.motor_id}: {error_message}") from error
         
         return wrapper
     return decorator
 
 
-class ControlMode(Enum):
+class OperatingMode(Enum):
     WHEEL = 1
     JOINT = 2
     POSITION = 3
@@ -38,71 +39,6 @@ class DynamixelServoError(IOError):
     def __init__(self, servo, message):
         self.servo = servo
         super().__init__(message)
-
-addresses = {}
-addresses["XL-320"] = {
-    "control_mode": 11,
-    "shutdown": 18,
-    "torque_enable": 24,
-    "led": 25,
-    "goal_position": 30,
-    "goal_velocity": 32, # moving_speed
-    "torque_limit": 35,
-    "current_position": 37,
-    "current_velocity": 39,
-    "current_load": 41,
-    "moving": 49,
-    "hardware_error_status": 50,
-    "OVERLOAD": 0,
-    "OVERHEAT": 1,
-    "INPUT_VOLTAGE": 2}
-addresses["XL430-W250-T"] = {        
-    "control_mode": 11,
-    "shutdown": 63,
-    "torque_enable": 64,
-    "led": 65,
-    "goal_position": 116,
-    "goal_velocity": 104,
-    "current_position": 132,
-    "current_velocity": 128,
-    "moving": 122,
-    "hardware_error_status": 70,
-    "INPUT_VOLTAGE": 0,
-    "OVERHEAT": 2,
-    "MOTOR_ENCODER_ERROR": 3,
-    "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-addresses["XC330-T288-T"] = {        
-    "control_mode": 11,
-    "shutdown": 63,
-    "torque_enable": 64,
-    "led": 65,
-    "goal_position": 116,
-    "goal_velocity": 104,
-    "current_position": 132,
-    "current_velocity": 128,
-    "moving": 122,
-    "hardware_error_status": 70,
-    "INPUT_VOLTAGE": 0,
-    "OVERHEAT": 2,
-    "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-addresses["XM430-W350"] = {        
-    "control_mode": 11,
-    "shutdown": 63,
-    "torque_enable": 64,
-    "led": 65,
-    "goal_position": 116,
-    "goal_velocity": 104,
-    "current_position": 132,
-    "current_velocity": 128,
-    "moving": 122,
-    "hardware_error_status": 70,
-    "INPUT_VOLTAGE": 0,
-    "OVERHEAT": 2,
-    "MOTOR_ENCODER_ERROR": 3,
-    "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
 
 
 class Servo(object):
@@ -126,11 +62,12 @@ class Servo(object):
         self.dxl_errors = 0 
         
         self.addresses = addresses[self.model]
+        self.velocity_in_pos_control = "moving_speed" if self.model == "XL-320" else "profile_velocity"
 
     @exception_handler("Failed to enable")
     def enable(self):
         self.disable_torque()
-        self.set_control_mode(ControlMode.JOINT.value)# default set to joint mode to avoid moving on start up
+        self.set_operating_mode(OperatingMode.JOINT.value)# default set to joint mode to avoid moving on start up
         if self.model == "XL-320":
             self.limit_torque()
             self.limit_speed()
@@ -148,8 +85,8 @@ class Servo(object):
 
     @exception_handler("Failed during step")
     def step(self):
-        control_mode = self.control_mode()
-        if control_mode == ControlMode.JOINT.value:
+        operating_mode = self.operating_mode()
+        if operating_mode == OperatingMode.JOINT.value:
             return
     
         current_state    = self.state()
@@ -167,18 +104,18 @@ class Servo(object):
         model_number, dxl_comm_result, dxl_error = self.packet_handler.ping(self.port_handler, self.motor_id)
         self.process_result(dxl_comm_result, dxl_error, message=f"successfully pinged Dynamixel#{self.motor_id} as model {model_number}")
    
-    @exception_handler("Failed to read control mode")
-    def control_mode(self): 
-        current_mode, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["control_mode"])
-        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully read control mode as {current_mode}")
-        return current_mode 
+    @exception_handler("Failed to read operating mode")
+    def operating_mode(self): 
+        operating_mode, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["operating_mode"])
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully read operating mode as {operating_mode}")
+        return operating_mode 
 
-    @exception_handler("Failed to set control mode")
-    def set_control_mode(self, new_mode): 
+    @exception_handler("Failed to set operating mode")
+    def set_operating_mode(self, new_mode): 
         self.disable_torque()#disable to set servo parameters
         
-        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(self.port_handler, self.motor_id, self.addresses["control_mode"], new_mode)
-        self.process_result(dxl_comm_result, dxl_error, message=f"successfully set control mode to {new_mode}")
+        dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(self.port_handler, self.motor_id, self.addresses["operating_mode"], new_mode)
+        self.process_result(dxl_comm_result, dxl_error, message=f"successfully set operating mode to {new_mode}")
 
         self.enable_torque() 
             
@@ -189,12 +126,13 @@ class Servo(object):
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
  
-        if self.model == "XL430-W250-T":
-            self.set_control_mode(ControlMode.POSITION.value)
-            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
-        else:
-            self.set_control_mode(ControlMode.JOINT.value)
+        if self.addresses["goal_position_length"] == 2:
+            self.set_operating_mode(OperatingMode.JOINT.value)
             dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
+        elif self.addresses["goal_position_length"] == 4:
+            self.set_operating_mode(OperatingMode.POSITION.value)
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
+            
             
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully told to move to {target_position}")
 
@@ -211,13 +149,18 @@ class Servo(object):
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
  
-        self.set_control_mode(ControlMode.WHEEL.value)
+        self.set_operating_mode(OperatingMode.WHEEL.value)
 
         if not self.validate_movement(target_velocity):
             return self.current_velocity()
         
+
         processed_velocity = Servo.velocity_to_bytes(target_velocity)
-        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
+        if self.addresses["goal_velocity_length"] == 2:
+            dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
+        elif self.addresses["goal_velocity_length"] == 4:
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
+        
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully told to move to at {target_velocity}")
         
         return self.current_velocity() 
@@ -229,41 +172,45 @@ class Servo(object):
     @exception_handler("Failed to check if moving")
     def is_moving(self): 
         current_position = self.current_position()
-        target_position  = self.current_target_position()
+        goal_position  = self.current_goal_position()
 
-        logging.debug(f"Dynamixel#{self.motor_id} is at position {current_position} and moving to {target_position}")
-        return abs(current_position - target_position) > DXL_MOVING_STATUS_THRESHOLD 
+        logging.debug(f"Dynamixel#{self.motor_id} is at position {current_position} and moving to {goal_position}")
+        return abs(current_position - goal_position) > DXL_MOVING_STATUS_THRESHOLD 
 
     @exception_handler("Failed to read current position")
     def current_position(self): 
-        if self.model == "XL430-W250-T":
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
-        else:
+        if self.addresses["current_position_length"] == 2:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
+        elif self.addresses["current_position_length"] == 4:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
+            
 
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured position {data_read}")
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: measured position {data_read}")
         return data_read 
 
     @exception_handler("Failed to read current goal position")
-    def current_target_position(self): 
-        if self.model == "XL430-W250-T":
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"])
-        else:
+    def current_goal_position(self): 
+        if self.addresses["goal_position_length"] == 2:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"])
+        elif self.addresses["goal_position_length"] == 4:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"])
             
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current goal position {data_read}")
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: current goal position {data_read}")
         return data_read
 
     @exception_handler("Failed to read current velocity")
     def current_velocity(self): 
-        data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_velocity"])
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
+        if self.addresses["current_velocity_length"] == 2:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control])
+        elif self.addresses["current_velocity_length"] == 4:
+            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control])
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: measured velocity {data_read}")
         return data_read 
 
     @exception_handler("Failed to read current load")
     def current_load(self): 
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_load"])
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: current load is {data_read}")
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: current load is {data_read}")
         # Convert it to a value between 0 - 1023 regardless of direction and then maps this between 0-100
         # See section 2.4.21 link for details on why this is required
         # https://emanual.robotis.com/docs/en/dxl/x/xl320/
@@ -273,17 +220,22 @@ class Servo(object):
     @exception_handler("Failed to read shutdown status")
     def read_shutdown(self): 
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["shutdown"])
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
+        self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: measured shutdown status {data_read}")
         
         statuses = self.process_shutdown(data_read)
 
         return statuses
+    
+    # @exception_handler("Failed to read shutdown status")
+    # def set_shutdown(self): 
+    #     dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx( self.port_handler, self.motor_id, self.addresses["shutdown"], self.shutdown)
+    #     self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully set shutdown values {self.shutdown}") 
 
 
     @exception_handler("Failed to read hardware error status")
     def read_hardware_errors(self): 
         data_read, dxl_comm_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, self.motor_id, self.addresses["hardware_error_status"])
-        self.process_result(dxl_comm_result, dxl_error, f"Dynamixel#{self.motor_id}: measured hardware error status {data_read}")
+        self.process_result(dxl_comm_result, dxl_error,message=f"Dynamixel#{self.motor_id}: measured hardware error status {data_read}")
         
         statuses = self.process_hardware_error(data_read)
 
@@ -296,7 +248,10 @@ class Servo(object):
 
     @exception_handler("Failed to limit speed")
     def limit_speed(self): 
-        dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], self.max_velocity)
+        if self.addresses[self.velocity_in_pos_control+"_length"] == 2:
+            dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control], self.max_velocity)
+        elif self.addresses[self.velocity_in_pos_control+"_length"] == 4:
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control], self.max_velocity)
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: has been successfully speed limited")
          
     @exception_handler("Failed to limit torque")
@@ -351,8 +306,6 @@ class Servo(object):
             
         logging.debug(f"Dynamixel#{self.motor_id}: {message}")
 
-
-
     def process_hardware_errors(self, data_read):                 
         statuses = [] # an array of errors that occured 
         if(data_read & 1<<self.addresses["INPUT_VOLTAGE"]): 
@@ -362,34 +315,47 @@ class Servo(object):
         if(data_read & 1<<self.addresses["OVERLOAD"]):
             statuses.append(self.addresses["OVERLOAD"])
 
-        if self.model == "XC330-T288-T":    
-            if(data_read & 1<<self.addresses["ELECTRICAL_SHOCK"]): 
+        if self.model != "XL-320":
+            if (data_read & 1<<self.addresses["MOTOR_ENCODER_ERROR"]): 
+                statuses.append(self.addresses["MOTOR_ENCODER_ERROR"])
+            if (data_read & 1<<self.addresses["ELECTRICAL_SHOCK"]): 
                 statuses.append(self.addresses["ELECTRICAL_SHOCK"])
+
     
         return statuses
+    
+    def data_to_bytes(self, data,length):
+        if length == 2:
+            return [dxl.DXL_LOBYTE(data), dxl.DXL_HIBYTE(data)]
+        elif length == 4:
+            return [dxl.DXL_LOBYTE(dxl.DXL_LOWORD(data)), dxl.DXL_HIBYTE(dxl.DXL_LOWORD(data)), dxl.DXL_LOBYTE(dxl.DXL_HIWORD(data)), dxl.DXL_HIBYTE(dxl.DXL_HIWORD(data))]
 
     def step_to_angle(self, step):
-        if self.model == "XL430-W250-T":
-            return ((step-2048)%4096)*360/4096
-        elif self.model == "XL-320":
+        if self.addresses["goal_position_length"] == 2:
             return (step - 511.5) / 3.41
+        elif self.addresses["goal_position_length"] == 4:
+            return ((step-2048)%4096)*360/4096
 
     def angle_to_step(self, angle):
-        if self.model == "XL430-W250-T":
-            return (angle*4096/360+2048)%4096
-        elif self.model == "XL-320":
+        if self.addresses["goal_position_length"] == 2:
             return (3.41 * angle) + 511.5
+        elif self.addresses["goal_position_length"] == 4:
+            return (angle*4096/360+2048)%4096
     
-    @staticmethod
-    def velocity_to_bytes(target_velocity):
+    def velocity_to_bytes(self, target_velocity):
         if target_velocity < 0:
-            return abs(target_velocity) + 1024#CCW 0-1023
+            if self.addresses[self.velocity_in_pos_control+"_length"] == 2:
+                return abs(target_velocity) + 1024#CCW 0-1023
+            elif self.addresses[self.velocity_in_pos_control+"_length"] == 4:
+                return abs(target_velocity) + 2048
         return target_velocity #CW 1024-2047
         
-    @staticmethod
-    def velocity_to_int(target_velocity):
+    def velocity_to_int(self, target_velocity):
         if target_velocity >= 1024:
-            return -(target_velocity-1024)
+            if self.addresses[self.velocity_in_pos_control+"_length"] == 2:
+                return -(target_velocity-1024)
+            elif self.addresses[self.velocity_in_pos_control+"_length"] == 4:
+                return -(target_velocity-2048)
         else:
             return target_velocity 
 
