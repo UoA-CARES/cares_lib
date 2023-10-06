@@ -255,10 +255,10 @@ class Gripper(object):
         for servo_id, servo in self.servos.items():
             step = servo.min if velocities[servo_id-1] < 0 else servo.max
             steps.append(step)
+            velocities[servo_id-1] = np.abs(velocities[servo_id-1])
         
         self.move(steps, wait=False)
         self.set_velocity(velocities)
-        print(self.goal_velocity())
 
     @exception_handler("Failed while trying to move by velocity wheel")
     def move_velocity_wheel(self, velocities):
