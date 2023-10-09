@@ -56,6 +56,7 @@ class Gripper(object):
 
         self.servos = {}
         self.servo_type = config.servo_type
+        self.action_type = config.action_type
 
         self.velocity_in_pos_control = "moving_speed" if self.servo_type == "XL-320" else "profile_velocity"
 
@@ -107,8 +108,10 @@ class Gripper(object):
     def state(self):
         current_state = {}
         current_state["positions"] = self.current_positions()
-        current_state["velocities"] = self.current_velocity()
-        current_state["loads"] = self.current_load()
+        if self.action_type == "velocity":
+            current_state["velocities"] = self.current_velocity()   
+            if self.servo_type == "XL-320":
+                current_state["loads"] = self.current_load()
 
         return current_state        
 
@@ -118,7 +121,7 @@ class Gripper(object):
         for motor_id, servo in self.servos.items():
             index = motor_id - 1
             current_position = state["positions"][index]
-            current_velocity = Servo.velocity_to_int(state["velocities"][index])
+            current_velocity = servo.velocity_to_int(state["velocities"][index])
             logging.debug(f"Current Velocity {current_velocity} : {servo.min} < {current_position} < {servo.max}")
             if (current_position >= servo.max and current_velocity > 0) or \
                 (current_position <= servo.min and current_velocity < 0):

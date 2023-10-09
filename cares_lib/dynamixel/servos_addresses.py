@@ -10,6 +10,8 @@ addresses["XL-320"] = {
     "led_length": 1,
     "goal_position": 30,
     "goal_position_length": 2,
+    "goal_velocity": 32,
+    "goal_velocity_length": 2,
     "moving_speed": 32,
     "moving_speed_length": 2,
     "torque_limit": 35,

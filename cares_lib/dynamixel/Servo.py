@@ -148,18 +148,16 @@ class Servo(object):
             error_message = f"Dynamixel#{self.motor_id}: Target velocity {target_velocity} over max velocity {self.max_velocity}"
             logging.error(error_message)
             raise DynamixelServoError(self, error_message)
- 
-        self.set_operating_mode(OperatingMode.WHEEL.value)
 
         if not self.validate_movement(target_velocity):
             return self.current_velocity()
         
 
-        processed_velocity = Servo.velocity_to_bytes(target_velocity)
-        if self.addresses["goal_velocity_length"] == 2:
-            dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
-        elif self.addresses["goal_velocity_length"] == 4:
-            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_velocity"], processed_velocity)
+        processed_velocity = self.velocity_to_bytes(target_velocity)
+        if self.addresses[self.velocity_in_pos_control+"_length"] == 2:
+            dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control], processed_velocity)
+        elif self.addresses[self.velocity_in_pos_control+"_length"] == 4:
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses[self.velocity_in_pos_control], processed_velocity)
         
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: successfully told to move to at {target_velocity}")
         

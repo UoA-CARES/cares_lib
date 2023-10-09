@@ -7,6 +7,7 @@ class GripperConfig(BaseModel):
     device_name: str
     baudrate: int
     servo_type: str
+    action_type: str
 
     torque_limit: int
     speed_limit: int
