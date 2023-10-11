@@ -126,7 +126,7 @@ class Gripper(object):
             if (current_position >= servo.max and current_velocity > 0) or \
                 (current_position <= servo.min and current_velocity < 0):
                 logging.debug(f"Dynamixel#{motor_id}: position out of boundry, stopping servo")
-                servo.move_velocity(0)
+                servo.stop_moving()
         return state
 
 
@@ -166,9 +166,10 @@ class Gripper(object):
         return gripper_moving
 
     @exception_handler("Failed to stop moving")
-    def stop_moving(self):
-        for _, servo in self.servos.items():
-            servo.stop_moving()
+    def stop_moving(self):   
+        self.set_velocity(np.zeros(self.num_motors, dtype=int))
+        self.move(self.current_positions())
+        self.set_velocity(np.full(self.num_motors, self.speed_limit))
 
     @exception_handler("Failed while moving servo")
     def move_servo(self, servo_id, target_step, wait=True, timeout=5):
@@ -260,8 +261,8 @@ class Gripper(object):
             steps.append(step)
             velocities[servo_id-1] = np.abs(velocities[servo_id-1])
         
-        self.move(steps, wait=False)
         self.set_velocity(velocities)
+        self.move(steps, wait=False)
 
     @exception_handler("Failed while trying to move by velocity wheel")
     def move_velocity_wheel(self, velocities):

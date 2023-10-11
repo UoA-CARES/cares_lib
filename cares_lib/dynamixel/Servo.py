@@ -96,7 +96,7 @@ class Servo(object):
         logging.debug(f"Current Velocity {current_velocity} : {self.min} < {current_position} < {self.max}")
         if (current_position >= self.max and current_velocity > 0) or \
             (current_position <= self.min and current_velocity < 0):
-            self.move_velocity(0)
+            self.stop_moving()
             logging.warn(f"Dynamixel#{self.motor_id}: position out of boundry, stopping servo")
  
     @exception_handler("Failed to ping")
@@ -165,8 +165,10 @@ class Servo(object):
 
     @exception_handler("Failed to stop")
     def stop_moving(self): 
-        return self.move(self.current_position())
-         
+        self.move_velocity(0)
+        self.move(self.current_position())
+        self.move_velocity(self.max_velocity)
+        
     @exception_handler("Failed to check if moving")
     def is_moving(self): 
         current_position = self.current_position()
