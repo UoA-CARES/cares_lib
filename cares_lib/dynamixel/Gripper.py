@@ -64,7 +64,7 @@ class Gripper(object):
             for id in range(1, self.num_motors + 1):
                 led = id % 7
                 self.servos[id] = Servo(self.port_handler, self.packet_handler, self.protocol, id, led,
-                                        config.torque_limit, config.speed_limit, self.max_values[id - 1],
+                                        config.torque_limit, self.speed_limit, self.max_values[id - 1],
                                         self.min_values[id - 1], self.servo_type)
             self.setup_servos()
         except (GripperError, DynamixelServoError) as error:
@@ -299,6 +299,9 @@ class Gripper(object):
     
     @exception_handler("Failed to home")
     def home(self):
+        if self.action_type == "velocity":
+            self.set_velocity(np.full(self.num_motors, self.speed_limit))
+
         pose = self.home_sequence[-1]
         self.move(pose)
 
@@ -311,6 +314,9 @@ class Gripper(object):
 
     @exception_handler("Failed to wiggle home")
     def wiggle_home(self):
+        if self.action_type == "velocity":
+            self.set_velocity(np.full(self.num_motors, self.speed_limit))
+
         for pose in self.home_sequence:
             self.move(pose)
 
