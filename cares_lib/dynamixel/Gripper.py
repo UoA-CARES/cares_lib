@@ -9,8 +9,7 @@ from cares_lib.dynamixel.Servo import Servo, DynamixelServoError, OperatingMode
 from cares_lib.dynamixel.servos_addresses import addresses
 from cares_lib.dynamixel.gripper_configuration import GripperConfig
 
-MOVING_STATUS_THRESHOLD = 20
-
+MOVING_STATUS_THRESHOLD = 50
 
 def exception_handler(error_message):
     def decorator(function):
@@ -338,7 +337,8 @@ class Gripper(object):
             self.disable_torque()#disable to set servo parameters
 
             for servo_id, servo in self.servos.items():            
-                dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["operating_mode"], 1, [new_mode[servo_id-1]])
+                print([new_mode[servo_id-1]])
+                dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["operating_mode"], servo.addresses["operating_mode_length"], [new_mode[servo_id-1]])
 
                 if not dxl_result:
                     error_message = f"Gripper#{self.gripper_id}: Failed to add operating mode param for Dynamixel#{servo_id}"
@@ -359,7 +359,7 @@ class Gripper(object):
     @exception_handler("Failed to enable tourque")
     def enable_torque(self):
         for servo_id, servo in self.servos.items():   
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["torque_enable"], 1, [1])
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["torque_enable"], servo.addresses["torque_enable_length"], [1])
 
             if not dxl_result:
                 error_message = f"Gripper#{self.gripper_id}: Failed to add torque enable param for Dynamixel#{servo_id}"
@@ -376,7 +376,7 @@ class Gripper(object):
     @exception_handler("Failed to disable tourque")
     def disable_torque(self):
         for servo_id, servo in self.servos.items():            
-            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["torque_enable"], 1, [0])    
+            dxl_result = self.group_bulk_write.addParam(servo_id, servo.addresses["torque_enable"], servo.addresses["torque_enable_length"], [0])    
 
             if not dxl_result:
                 error_message = f"Gripper#{self.gripper_id}: Failed to add torque disable param for Dynamixel#{servo_id}"

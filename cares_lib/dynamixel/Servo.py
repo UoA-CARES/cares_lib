@@ -179,13 +179,10 @@ class Servo(object):
     @exception_handler("Failed to read current position")
     def current_position(self): 
         if self.addresses["current_position_length"] == 2:
-            data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
-        else:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read2ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
         elif self.addresses["current_position_length"] == 4:
             data_read, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(self.port_handler, self.motor_id, self.addresses["current_position"])
             
-
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: measured position {data_read}")
         return data_read 
 
