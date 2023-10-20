@@ -20,11 +20,11 @@ class SlackBot:
   def __init__(self, slack_token):
     self.client = slack.WebClient(token=slack_token)
     
-  @exception_handler("Failed to post message")
+  @exception_handler("Failed to post message to slack")
   def post_message(self, channel, message):
     self.client.chat_postMessage(channel=channel,text=message)
 
-  @exception_handler("Failed to get message")
+  @exception_handler("Failed to get slack message")
   def get_message(self, channel):
     conversation_id = self.get_id(channel)
     result = self.client.conversations_history(
@@ -36,7 +36,7 @@ class SlackBot:
     message = result["messages"][0]
     return message["text"]
 
-  @exception_handler("Failed to get ids")
+  @exception_handler("Failed to get slack conversation ids")
   def get_id(self, channel_name):
     conversation_id = None
     for result in self.client.conversations_list():
