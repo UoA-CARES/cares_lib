@@ -4,8 +4,8 @@ from typing import List
 class GripperConfig(BaseModel):
     gripper_type: int
     gripper_id: int
-    device_name: str
-    baudrate: int
+    gripper_device_name: str
+    gripper_baudrate: int
     servo_type: str
     action_type: str
 

@@ -41,8 +41,8 @@ class Gripper(object):
         self.velocity_max = config.velocity_max
 
         self.home_sequence = config.home_sequence
-        self.device_name = config.device_name
-        self.baudrate = config.baudrate
+        self.device_name = config.gripper_device_name
+        self.baudrate = config.gripper_baudrate
 
         self.protocol = 2  # NOTE: All current servos uses protocol 2, update needed
 
