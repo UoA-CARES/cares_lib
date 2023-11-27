@@ -11,8 +11,8 @@ def exception_handler(error_message):
         def wrapper(self, *args, **kwargs):
             try:
                 return function(self, *args, **kwargs)
-            except:
-                logging.error(f"{error_message}")
+            except SlackApiError as e:
+                logging.error(f"{error_message} error {e.response['error']}")
         return wrapper
     return decorator
 
