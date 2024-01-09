@@ -10,9 +10,9 @@ class STagDetector(MarkerDetector):
             Value needs to be in range 0 \<= error_correction \<= (HD-1)/2.
             If set to -1, the max possible value for the given library HD is used.
         """
+        super().__init__(marker_size)
         self.dictionary = library_hd
         self.error_correction = error_correction
-        self.marker_size = marker_size
 
     def get_marker_poses(self, image, camera_matrix, camera_distortion, display=True):
         (corners, ids, rejected_points) = stag.detectMarkers(image, self.dictionary, self.error_correction)

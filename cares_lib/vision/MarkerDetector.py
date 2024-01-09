@@ -5,9 +5,7 @@ from abc import ABC
 
 class MarkerDetector(ABC):
     """Base class for marker detectors like ArucoDetector and STagDetector"""
-    def __init__(self, marker_size, dictionary_id=cv2.aruco.DICT_4X4_50):
-        self.dictionary = cv2.aruco.Dictionary_get(dictionary_id)
-        self.aruco_params = cv2.aruco.DetectorParameters_create()
+    def __init__(self, marker_size):
         self.marker_size = marker_size
 
     def get_orientation(self, r_vec):
