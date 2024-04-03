@@ -66,11 +66,12 @@ class Servo(object):
     @exception_handler("Failed to enable")
     def enable(self):
         self.disable_torque()
-        self.set_operating_mode(OperatingMode.JOINT.value)# default set to joint mode to avoid moving on start up
+        self.set_operating_mode(OperatingMode.POSITION.value)
         if self.model == "XL-320":
+            self.set_operating_mode(OperatingMode.JOINT.value)# default set to joint mode to avoid moving on start up
             self.limit_torque()
-            self.limit_speed()
-            self.enable_torque()
+        self.limit_speed()
+        self.enable_torque()
         self.turn_on_LED()
 
     def state(self):
@@ -126,10 +127,8 @@ class Servo(object):
             raise DynamixelServoError(self, error_message)
  
         if self.addresses["goal_position_length"] == 2:
-            self.set_operating_mode(OperatingMode.JOINT.value)
             dxl_comm_result, dxl_error = self.packet_handler.write2ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
         elif self.addresses["goal_position_length"] == 4:
-            self.set_operating_mode(OperatingMode.POSITION.value)
             dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["goal_position"], target_position)
             
             
