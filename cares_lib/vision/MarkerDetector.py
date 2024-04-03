@@ -25,6 +25,7 @@ class MarkerDetector(ABC):
         pose = {}
         pose["position"] = t_vec[0]
         pose["orientation"] = self.get_orientation(r_vec)
+        pose["r_vec"] = r_vec
         return pose
         
     def get_marker_poses(self, image, camera_matrix, camera_distortion, corners, ids, display=True):
