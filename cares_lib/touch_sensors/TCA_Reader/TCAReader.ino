@@ -5,8 +5,8 @@
  *
  */
 
- /*
- Always goes 5v -> Ground -> SCL -> SDA
+/*
+ *Pins always go 5v -> Ground -> SCL -> SDA
  */
 
 #include "Wire.h"
