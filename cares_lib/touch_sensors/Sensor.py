@@ -33,8 +33,6 @@ class Sensor(object):
                         self.stop()
                     print("Recieved non-numeric data:", packet)
 
-
-
     def get_pressure_readings(self):
         return self.pressure_readings
     
