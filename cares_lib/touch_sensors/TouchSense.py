@@ -34,7 +34,7 @@ def write_to_port(serial_connection):
 def main():
     serialInst = serial.Serial()
     serialInst.baudrate = 921600
-    serialInst.port = "COM5"
+    serialInst.port = "/dev/ttyACM0"
     serialInst.open()
     # thread for reading from port
     thread = threading.Thread(target=read_from_port, args=(serialInst,))

@@ -38,6 +38,5 @@ class Sensor(object):
     
     def stop(self):
         self.read_thread.join()
-        self.write_thread.join()
         print("Exited Cleanly")
         self.serialInst.close()
