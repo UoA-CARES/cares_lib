@@ -154,14 +154,6 @@ void loop()
     String msg = Serial.readString();
     flashLED();
 
-    // if (msg == "ping"){
-    //   flashLED();
-    //   printpressures(); //~24ms runtime therefore 50ms Serial timeout
-    // } 
-    // if (msg == "reboot"){
-    //   resetFunc();
-    // }
-
     if (msg == "exit"){
       quit();
     }
