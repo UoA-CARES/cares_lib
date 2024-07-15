@@ -8,6 +8,7 @@ class Sensor(object):
         self.port = port
         self.baudrate = baudrate
         self.max_readings = [0,0]
+        self.values = []
 
     def initialise(self):
         self.serialInst = serial.Serial()
@@ -29,15 +30,18 @@ class Sensor(object):
                     continue
                 else:
                     try:
-                        values = [float(value) for value in values if value]
+                        self.values = [float(value) for value in values if value]
                         combined = []
-                        for num1, num2 in zip(values, self.max_readings):
+                        for num1, num2 in zip(self.values, self.max_readings):
                             combined.append(max(num1,num2))
                         self.max_readings = combined
                         # self.pressure_readings = [float(value) for value in values if value]
                     except: 
                         print("Recieved non-numeric data:", packet)
 
+
+    def get_raw_readings(self):
+        return self.values
 
     def get_pressure_readings(self):
         return self.max_readings

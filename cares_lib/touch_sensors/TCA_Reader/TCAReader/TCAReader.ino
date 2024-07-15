@@ -1,3 +1,5 @@
+#include <Arduino_BuiltIn.h>
+
 /*
  * TCA9548 I2CScanner.ino -- I2C bus scanner for Arduino
  *
@@ -5,8 +7,8 @@
  *
  */
 
-/*
- *Pins always go 5v -> Ground -> SCL -> SDA
+ /*
+ Always goes 5v -> Ground -> SCL -> SDA
  */
 
 #include "Wire.h"
@@ -15,8 +17,8 @@
 
 #define TCAADDR 0x70
 
-#define PIN 19
-#define NUMPIXELS 8
+#define PIN 6
+#define NUMPIXELS 24
 #define DELAYVAL 100
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -46,11 +48,11 @@ void setup()
     pixels.begin();
     for(int i=0; i<NUMPIXELS; i++) { 
       pixels.setPixelColor(i, pixels.Color(255, 255, 255));
-      pixels.setBrightness(20);
+      pixels.setBrightness(100);
       pixels.show();  
       delay(DELAYVAL); 
     }
-    pixels.clear();
+    // pixels.clear();
     pixels.show();
 
     while (!Serial);
@@ -130,7 +132,7 @@ void printpressures(){
     }
   }
   Serial.println(" ");
-  pixels.clear();
+  // pixels.clear();
   pixels.show();
 }
 
@@ -152,15 +154,12 @@ void loop()
 {
   if (Serial.available() > 0){
     String msg = Serial.readString();
-    flashLED();
-
     if (msg == "exit"){
       quit();
     }
   }
   printpressures();
 }
-
 
 
 

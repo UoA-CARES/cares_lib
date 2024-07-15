@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class GripperConfig(BaseModel):
     gripper_type: int
@@ -18,3 +18,5 @@ class GripperConfig(BaseModel):
     min_values: List[int]
     max_values: List[int]
     home_sequence: List[List[int]]
+
+    touch: Optional[bool] = False
