@@ -1,6 +1,6 @@
 addresses = {}
 addresses["XL-320"] = {
-    "operating_mode": 11, # control_mode
+    "operating_mode": 11,  # control_mode
     "operating_mode_length": 1,
     "shutdown": 18,
     "shutdown_length": 1,
@@ -28,7 +28,8 @@ addresses["XL-320"] = {
     "hardware_error_status_length": 1,
     "OVERLOAD": 0,
     "OVERHEAT": 1,
-    "INPUT_VOLTAGE": 2}
+    "INPUT_VOLTAGE": 2,
+}
 addresses["XL330-M077-T"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
@@ -55,8 +56,9 @@ addresses["XL330-M077-T"] = {
     "INPUT_VOLTAGE": 0,
     "OVERHEAT": 2,
     "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-addresses["XC330-T288-T"] = {        
+    "OVERLOAD": 5,
+}
+addresses["XC330-T288-T"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -83,8 +85,9 @@ addresses["XC330-T288-T"] = {
     "OVERHEAT": 2,
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-addresses["XL430-W250-T"] = {        
+    "OVERLOAD": 5,
+}
+addresses["XL430-W250-T"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -111,8 +114,9 @@ addresses["XL430-W250-T"] = {
     "OVERHEAT": 2,
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-addresses["XM430-W350"] = {        
+    "OVERLOAD": 5,
+}
+addresses["XM430-W350"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -139,5 +143,80 @@ addresses["XM430-W350"] = {
     "OVERHEAT": 2,
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
-    "OVERLOAD": 5}
-    
+    "OVERLOAD": 5,
+}
+addresses["MX-106"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,  # Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36,  # Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0,
+}
+addresses["MX-64"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,  # Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36,  # Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0,
+}
+addresses["MX-28"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,  # Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36,  # Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0,
+}
