@@ -61,7 +61,7 @@ class Servo(object):
         self.dxl_errors = 0 
         
         self.addresses = addresses[self.model]
-        self.velocity_in_pos_control = "moving_speed" if self.model == "XL-320" else "profile_velocity"
+        self.velocity_in_pos_control = "moving_speed" if self.model == "XL-320" or self.model == "MX-106" else "profile_velocity"
 
     @exception_handler("Failed to enable")
     def enable(self):
