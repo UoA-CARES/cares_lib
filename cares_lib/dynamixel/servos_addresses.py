@@ -56,7 +56,7 @@ addresses["XL330-M077-T"] = {
     "OVERHEAT": 2,
     "ELECTRICAL_SHOCK": 4,
     "OVERLOAD": 5}
-addresses["XC330-T288-T"] = {        
+addresses["XC330-T288-T"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -84,7 +84,7 @@ addresses["XC330-T288-T"] = {
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
     "OVERLOAD": 5}
-addresses["XL430-W250-T"] = {        
+addresses["XL430-W250-T"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -112,7 +112,7 @@ addresses["XL430-W250-T"] = {
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
     "OVERLOAD": 5}
-addresses["XM430-W350"] = {        
+addresses["XM430-W350"] = {
     "operating_mode": 11,
     "operating_mode_length": 1,
     "shutdown": 63,
@@ -140,4 +140,129 @@ addresses["XM430-W350"] = {
     "MOTOR_ENCODER_ERROR": 3,
     "ELECTRICAL_SHOCK": 4,
     "OVERLOAD": 5}
-    
+addresses["MX-106"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,    #Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36, #Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "profile_velocity": 112,
+    "profile_velocity_length": 4,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0}
+addresses["MX-64"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,    #Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36, #Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "profile_velocity": 112,
+    "profile_velocity_length": 4,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0}
+addresses["MX-28"] = {
+    "shutdown": 18,
+    "shutdown_length": 1,
+    "torque_enable": 24,
+    "torque_enable_length": 1,
+    "led": 25,
+    "led_length": 1,
+    "goal_position": 30,    #Actually changes the values destination
+    "goal_position_length": 2,
+    "moving_speed": 32,
+    "moving_speed_length": 2,
+    "torque_limit": 34,
+    "torque_limit_length": 2,
+    "current_position": 36, #Reads the value of where I am
+    "current_position_length": 2,
+    "current_velocity": 38,
+    "current_velocity_length": 2,
+    "current_load": 40,
+    "current_load_length": 2,
+    "profile_velocity": 112,
+    "profile_velocity_length": 4,
+    "moving": 46,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0}
+addresses["MX-64Protocol2"] = {
+    "shutdown": 63,
+    "shutdown_length": 1,
+    "torque_enable": 64,
+    "torque_enable_length": 1,
+    "led": 65,
+    "led_length": 1,
+    "goal_position": 116,    #Actually changes the values destination
+    "goal_position_length": 4,
+    "moving_speed": 104,
+    "moving_speed_length": 4,
+    "current_position": 132, #Reads the value of where I am
+    "current_position_length": 4,
+    "current_velocity": 128,
+    "current_velocity_length": 4,
+    "current_load": 126,
+    "current_load_length": 2,
+    "profile_velocity": 112,
+    "profile_velocity_length": 4,
+    "moving": 122,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0}
+addresses["MX-28Protocol2"] = {
+    "shutdown": 63,
+    "shutdown_length": 1,
+    "torque_enable": 64,
+    "torque_enable_length": 1,
+    "led": 65,
+    "led_length": 1,
+    "goal_position": 116,    #Actually changes the values destination
+    "goal_position_length": 4,
+    "moving_speed": 104,
+    "moving_speed_length": 4,
+    "current_position": 132, #Reads the value of where I am
+    "current_position_length": 4,
+    "current_velocity": 128,
+    "current_velocity_length": 4,
+    "current_load": 126,
+    "current_load_length": 2,
+    "profile_velocity": 112,
+    "profile_velocity_length": 4,
+    "moving": 122,
+    "moving_length": 1,
+    "OVERLOAD": 5,
+    "OVERHEAT": 2,
+    "INPUT_VOLTAGE": 0}
