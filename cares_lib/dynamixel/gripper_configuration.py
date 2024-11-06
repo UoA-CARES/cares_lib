@@ -20,3 +20,4 @@ class GripperConfig(BaseModel):
     home_sequence: List[List[int]]
 
     touch: Optional[bool] = False
+    touch_port: Optional[str] = "/dev/ttyACM0"
