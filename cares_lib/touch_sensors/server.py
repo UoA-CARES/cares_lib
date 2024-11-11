@@ -3,6 +3,7 @@ import serial
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+import re
 
 class Sensor(object):
     def __init__(self, port, baudrate):
@@ -11,7 +12,9 @@ class Sensor(object):
         self.values = []
         self.running = False
         self.server_ready = False
-        self.timeout = 5
+        self.timeout = 8
+        self.baseline_values = [0,0,0,0]
+        self.max_values = [0,0,0,0]
 
     def initialise(self):
         self.serialInst = serial.Serial()
@@ -35,17 +38,22 @@ class Sensor(object):
                 if "Pressure Baselines" in packet or elapsed_time > self.timeout and not self.server_ready:
                     print("Sensor preamble complete or timeout reached.")
                     self.server_ready = True
+                    numbers = [float(num) for num in re.findall(r"[-+]?\d*\.\d+|\d+", packet)]
+                    self.baseline_values = [num for num in numbers if num != 0.0]
                 values = packet.split(" ")
-                if len(values) < 2:
-                    print("Received incomplete data:", packet)
+                if len(values) < 4:
+                    # print("Received incomplete data:", packet)
                     continue
                 else:
                     try:
-                        self.values = [float(value) for value in values if value]
+                        self.values = [float(value) for value in values if value] 
+                        self.max_values = [max(self.values[i], self.max_values[i]) for i in range(len(self.values))]
                     except ValueError:
                         print("Received non-numeric data:", packet)
             serial_connection.reset_input_buffer()
         
+    def reset_max_values(self):
+        self.max_values = [0.0] * len(self.max_values)
 
     def stop(self):
         self.running = False
@@ -53,7 +61,7 @@ class Sensor(object):
         self.serialInst.close()
 
 class Server(Sensor):
-    def __init__(self, port, baudrate, host='localhost', socket_port=65432):
+    def __init__(self, port, baudrate, socket_port, host='localhost'):
         super().__init__(port, baudrate)
         self.host = host
         self.socket_port = socket_port

@@ -18,7 +18,7 @@ def get_values(id, host='127.0.0.1', port=65432):
     
 if __name__ == "__main__":
     print("Starting server...")
-    server1 = server.Server(port="/dev/ttyACM1", baudrate=921600)
+    server1 = server.Server(port="/dev/ttyACM0", baudrate=921600)
     server_thread = threading.Thread(target=server1.start)
     server_thread.daemon = True
     server_thread.start()
