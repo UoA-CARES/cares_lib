@@ -118,24 +118,5 @@ class Server(Sensor):
                 client_socket.close()
                 break
 
-
-        # while self.running:
-        #     try:
-        #         data = client_socket.recv(1024).decode('utf-8')
-        #         if data == "i":
-        #             response = str(self.values)  # Send the first two values
-        #             client_socket.sendall(response.encode('utf-8'))
-        #             client_socket.shutdown(socket.SHUT_RDWR)
-        #             client_socket.close()
-        #             break
-        #         elif data == "quit":
-        #             self.stop()
-        #             client_socket.shutdown(socket.SHUT_RDWR)
-        #             client_socket.close()
-        #             break
-        #     except (socket.timeout, ConnectionResetError):
-        #         client_socket.close()
-        #         break
-
     def stop(self):
         self.running = False
