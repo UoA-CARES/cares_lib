@@ -12,9 +12,10 @@ class Sensor(object):
         self.values = []
         self.running = False
         self.server_ready = False
-        self.timeout = 8
+        self.timeout = 6
         self.baseline_values = [0,0,0,0]
         self.max_values = [0,0,0,0]
+        self.error = False
 
     def initialise(self):
         self.serialInst = serial.Serial()
@@ -30,26 +31,34 @@ class Sensor(object):
     def read_from_port(self, serial_connection):
         start_time = time.time()
         while True:
-            if not self.running:
+            try:
+                if not self.running:
+                    break
+                elapsed_time = time.time() - start_time
+                packet = serial_connection.readline().decode('utf-8').strip()
+                if packet:
+                    if "Pressure Baselines" in packet or elapsed_time > self.timeout and not self.server_ready:
+                        print("Sensor preamble complete or timeout reached.")
+                        self.server_ready = True
+                        numbers = [float(num) for num in re.findall(r"[-+]?\d*\.\d+|\d+", packet)]
+                        self.baseline_values = [num for num in numbers if num != 0.0]
+                    values = packet.split(" ")
+                    if len(values) < 4:
+                        # print("Received incomplete data:", packet)
+                        continue
+                    else:
+                        try:
+                            self.values = [float(value) for value in values if value] 
+                            if len(self.values) != len(self.max_values):
+                                continue
+                            else:
+                                self.max_values = [max(self.values[i], self.max_values[i]) for i in range(len(self.values))]
+                        except ValueError:
+                            print("Received non-numeric data:", packet)
+            except serial.SerialException as e:
+                print("Error reading from serial port:", e)
+                self.error = True
                 break
-            elapsed_time = time.time() - start_time
-            packet = serial_connection.readline().decode('utf-8').strip()
-            if packet:
-                if "Pressure Baselines" in packet or elapsed_time > self.timeout and not self.server_ready:
-                    print("Sensor preamble complete or timeout reached.")
-                    self.server_ready = True
-                    numbers = [float(num) for num in re.findall(r"[-+]?\d*\.\d+|\d+", packet)]
-                    self.baseline_values = [num for num in numbers if num != 0.0]
-                values = packet.split(" ")
-                if len(values) < 4:
-                    # print("Received incomplete data:", packet)
-                    continue
-                else:
-                    try:
-                        self.values = [float(value) for value in values if value] 
-                        self.max_values = [max(self.values[i], self.max_values[i]) for i in range(len(self.values))]
-                    except ValueError:
-                        print("Received non-numeric data:", packet)
             serial_connection.reset_input_buffer()
         
     def reset_max_values(self):
@@ -80,7 +89,7 @@ class Server(Sensor):
         print("Sensor preamble in progress...")
         while not self.server_ready:
             time.sleep(0.5)
-        print(f"Server strated and ready on {self.host}:{self.socket_port}")
+        print(f"Server started and ready on {self.host}:{self.socket_port}")
     
         try:
             while self.running:
@@ -120,3 +129,5 @@ class Server(Sensor):
 
     def stop(self):
         self.running = False
+        self.server_socket.close()
+        super().stop()
