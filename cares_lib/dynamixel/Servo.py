@@ -61,7 +61,7 @@ class Servo(object):
         self.dxl_errors = 0 
         
         self.addresses = addresses[self.model]
-        self.velocity_in_pos_control = "moving_speed" if self.model == "XL-320" or self.model == "MX-106" else "profile_velocity"
+        self.velocity_in_pos_control = "moving_speed" if self.protocol == 1 else "goal_velocity"
 
     @exception_handler("Failed to enable")
     def enable(self):
@@ -270,6 +270,22 @@ class Servo(object):
     def reboot(self):
         dxl_comm_result, dxl_error = self.packet_handler.reboot(self.port_handler, self.motor_id)
         self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: has successfully rebooted servo")
+
+    @exception_handler("Failed to set drive mode")
+    def set_drive_mode(self, drive_mode):
+        if self.addresses["protocol"] == 2:
+            dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(self.port_handler, self.motor_id, self.addresses["drive_mode"], drive_mode)
+            self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: has successfully set drive mode to {drive_mode}")
+        else:
+            logging.error(f"Dynamixel#{self.motor_id}: Drive mode not supported in protocol {self.protocol}")
+
+    @exception_handler("Failed to set profile velocity")
+    def set_profile_velocity(self, profile_velocity):
+        if self.addresses["protocol"] == 2:
+            dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(self.port_handler, self.motor_id, self.addresses["profile_velocity"], profile_velocity)
+            self.process_result(dxl_comm_result, dxl_error, message=f"Dynamixel#{self.motor_id}: has successfully set profile velocity to {profile_velocity}")
+        else:
+            logging.error(f"Dynamixel#{self.motor_id}: Profile velocity not supported in protocol {self.protocol}")
     
     def verify_step(self, step):
         return self.min <= step <= self.max
