@@ -26,7 +26,7 @@ def exception_handler(error_message):
         return wrapper
     return decorator
 
-
+# This is the list of all the operating modes that are supported by the Dynamixel SDK/Servos
 class OperatingMode(Enum):
     WHEEL = 1
     JOINT = 2
